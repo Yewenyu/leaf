@@ -14,7 +14,7 @@ fn test_direct() {
             {
                 "protocol": "socks",
                 "address": "127.0.0.1",
-                "port": 1086
+                "port": 7778
             }
         ],
         "outbounds": [

@@ -1,11 +1,11 @@
 [package]
-name = "leaf-client"
+name = "ts-client"
 version = "0.1.0"
 authors = ["eycorsican <eric.y.corsican@gmail.com>"]
 edition = "2021"
 
 [lib]
-name = "leaf"
+name = "ts"
 path = "src/lib.rs"
 crate-type = ["staticlib"]
 
@@ -25,7 +25,7 @@ default-openssl = [
 auto-reload = ["leaf/auto-reload"]
 
 [dependencies]
-leaf = { path = "../leaf", default-features = false, optional = true }
+leaf = { path = "../leaf", default-features = false, optional = true,features = ["default","auto-reload"] }
 tokio = { version = "1", features = ["rt"] }
 futures = "0.3"
 

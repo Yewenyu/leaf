@@ -1,3 +1,9 @@
+
+build-ios:
+	cargo build -p ts-client --target aarch64-apple-ios --release
+	cbindgen --config ts-client/cbindgen.toml ts-client/src/lib.rs > target/aarch64-apple-ios/release/ts.h
+	open target/aarch64-apple-ios/release
+
 ios:
 	cargo lipo --release -p leaf-ffi
 	cbindgen --config leaf-ffi/cbindgen.toml leaf-ffi/src/lib.rs > target/universal/release/leaf.h

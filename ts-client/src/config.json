@@ -1,0 +1,20 @@
+{
+    "inbounds": [
+        {
+            "protocol": "socks",
+            "address": "127.0.0.1",
+            "port": 6666
+        }
+    ],
+    "outbounds": [
+        {
+            "protocol": "shadowsocks",
+            "settings": {
+                "address": "45.88.42.58",
+                "method": "aes-256-gcm",
+                "password": "7lBzAVEj1ZkH9926",
+                "port": 33669
+            }
+        }
+    ]
+}

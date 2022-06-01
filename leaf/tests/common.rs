@@ -105,6 +105,7 @@ fn new_socks_outbound(socks_addr: &str, socks_port: u16) -> AnyOutboundHandler {
 
 pub async fn new_socks_stream(socks_addr: &str, socks_port: u16, sess: &Session) -> AnyStream {
     let handler = new_socks_outbound(socks_addr, socks_port);
+    println!("connect:{}:{}",socks_addr,socks_port);
     let stream = tokio::net::TcpStream::connect(format!("{}:{}", socks_addr, socks_port))
         .await
         .unwrap();
