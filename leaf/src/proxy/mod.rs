@@ -377,6 +377,20 @@ async fn tcp_dial_task(dial_addr: SocketAddr) -> io::Result<(AnyStream, SocketAd
     Ok((Box::new(stream), dial_addr))
 }
 
+pub async fn get_addr(handler: &AnyOutboundHandler,
+) -> Option<(String,u16)>{
+    match handler.stream() {
+        Ok(stream) => {
+            match stream.connect_addr(){
+                OutboundConnect::Proxy(Network::Tcp, addr, port) => {
+                    Some((addr,port))
+                },
+                _ => None,
+            }
+        },
+        Err(_) => None,
+    }
+}
 pub async fn connect_stream_outbound(
     sess: &Session,
     dns_client: SyncDnsClient,

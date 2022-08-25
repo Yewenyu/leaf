@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::path::Path;
+use std::str::FromStr;
 
 use anyhow::anyhow;
 use anyhow::Result;
@@ -175,6 +176,12 @@ pub struct FailOverOutboundSettings {
     pub fail_timeout: Option<u32>,
     #[serde(rename = "healthCheck")]
     pub health_check: Option<bool>,
+    #[serde(rename = "healthCheckTimeout")]
+    pub health_check_timeout: Option<u32>,
+    #[serde(rename = "healthCheckAddr")]
+    pub health_check_addr: Option<String>,
+    #[serde(rename = "healthCheckContent")]
+    pub health_check_content: Option<String>,
     #[serde(rename = "checkInterval")]
     pub check_interval: Option<u32>,
     pub failover: Option<bool>,
@@ -681,6 +688,7 @@ pub fn to_internal(json: &mut Config) -> Result<internal::Config> {
                     if ext_outbound.settings.is_none() {
                         return Err(anyhow!("invalid failover outbound settings"));
                     }
+                    
                     let mut settings = internal::FailOverOutboundSettings::new();
                     let ext_settings: FailOverOutboundSettings =
                         serde_json::from_str(ext_outbound.settings.as_ref().unwrap().get())
@@ -705,6 +713,19 @@ pub fn to_internal(json: &mut Config) -> Result<internal::Config> {
                     } else {
                         settings.check_interval = 300;
                     }
+                    if let Some(v) = ext_settings.health_check_timeout {
+                        settings.health_check_timeout = v;
+                    } else {
+                        settings.health_check_timeout = 30;
+                    }
+                    if let Some(v) = ext_settings.health_check_addr {
+                        settings.health_check_addr = v;
+                    }
+                    if let Some(v) = ext_settings.health_check_content {
+                        settings.health_check_content = v;
+                    }
+                    
+                    
                     if let Some(ext_failover) = ext_settings.failover {
                         settings.failover = ext_failover;
                     } else {

@@ -413,6 +413,7 @@ impl OutboundManager {
                                 continue 'outbounds;
                             }
                         };
+                        
                         let (stream, mut stream_abort_handles) = failover::StreamHandler::new(
                             actors.clone(),
                             settings.fail_timeout,
@@ -425,6 +426,8 @@ impl OutboundManager {
                             last_resort.clone(),
                             settings.health_check_timeout,
                             settings.health_check_delay,
+                            settings.health_check_addr,
+                            settings.health_check_content,
                             dns_client.clone(),
                         );
                         let (datagram, mut datagram_abort_handles) = failover::DatagramHandler::new(

@@ -1,3 +1,4 @@
+use std::io::{Write, Read};
 use std::{io, sync::Arc, time};
 
 use async_trait::async_trait;
@@ -7,6 +8,7 @@ use futures::FutureExt;
 use log::*;
 use lru_time_cache::LruCache;
 use rand::{rngs::StdRng, Rng, SeedableRng};
+use serde_json::from_str;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::Mutex as TokioMutex;
 use tokio::time::timeout;
@@ -30,18 +32,45 @@ pub struct Handler {
 #[derive(Debug, Eq, Ord, PartialEq, PartialOrd)]
 struct Measure(usize, u128); // (index, duration in millis)
 
+fn test(){
+    let mut stream = std::net::TcpStream::connect("127.0.0.1:5555").expect("connect failed");
+            stream
+                .write(b"ping")
+                .expect("write failed");
+            let mut buf = *b"1111";
+            stream.read_exact(&mut buf);
+            println!("{:?}",String::from_utf8(buf.to_vec()));
+}
+
 async fn health_check_task(
     i: usize,
     h: AnyOutboundHandler,
     dns_client: SyncDnsClient,
     delay: time::Duration,
     health_check_timeout: u32,
+    health_check_addr:String,
+    health_check_content:String
 ) -> Measure {
     tokio::time::sleep(delay).await;
     debug!("health checking tcp for [{}] index [{}]", h.tag(), i);
     let measure = async move {
+        let mut host = "www.google.com".to_string();
+        let mut port = 80;
+        let mut content  = "HEAD / HTTP/1.1\r\n\r\n".to_string();
+        let arr = health_check_addr.split(":").collect::<Vec<&str>>();
+        if arr.len() > 1{
+            host = arr[0].to_string();
+            port = match from_str(arr[1]){
+                Ok(s) => s,
+                Err(_) => port,
+            }
+        }
+        content = match health_check_content.is_empty() {
+            true => content,
+            false => health_check_content,
+        };
         let sess = Session {
-            destination: SocksAddr::Domain("www.google.com".to_string(), 80),
+            destination: SocksAddr::Domain(host, port),
             new_conn_once: true,
             ..Default::default()
         };
@@ -58,7 +87,7 @@ async fn health_check_task(
         };
         match th.handle(&sess, stream).await {
             Ok(mut stream) => {
-                if stream.write_all(b"HEAD / HTTP/1.1\r\n\r\n").await.is_err() {
+                if stream.write_all(content.as_bytes()).await.is_err() {
                     return Measure(i, u128::MAX - 2); // handshake is ok
                 }
                 let mut buf = vec![0u8; 1];
@@ -108,7 +137,10 @@ impl Handler {
         last_resort: Option<AnyOutboundHandler>,
         health_check_timeout: u32,
         health_check_delay: u32,
+        health_check_addr:String,
+        health_check_content:String,
         dns_client: SyncDnsClient,
+        
     ) -> (Self, Vec<AbortHandle>) {
         let mut abort_handles = Vec::new();
         let mut schedule = Vec::new();
@@ -135,9 +167,11 @@ impl Handler {
                         checks.push(Box::pin(health_check_task(
                             i,
                             a.clone(),
-                            dns_client4,
+                            dns_client4.clone(),
                             delay,
                             health_check_timeout,
+                            health_check_addr.clone(),
+                            health_check_content.clone()
                         )));
                     }
                     let mut measures = futures::future::join_all(checks).await;
