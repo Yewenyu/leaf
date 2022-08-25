@@ -3,6 +3,7 @@ use std::{sync::Arc, time::Duration};
 
 use log::*;
 use rand::{rngs::StdRng, Rng, SeedableRng};
+use serde_json::from_str;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::Mutex;
 use tokio::time::{timeout, Instant};
@@ -29,6 +30,8 @@ pub(self) async fn health_check(
     dns_client: SyncDnsClient,
     delay: Duration,
     health_check_timeout: u32,
+    health_check_addr:String,
+    health_check_content:String
 ) -> Measure {
     tokio::time::sleep(delay).await;
 
@@ -38,10 +41,26 @@ pub(self) async fn health_check(
         &network,
         idx
     );
+    let mut host = "www.google.com".to_string();
+    let mut port = 80;
+    let mut content  = "HEAD / HTTP/1.1\r\n\r\n".to_string();
+    let arr = health_check_addr.split(":").collect::<Vec<&str>>();
+    if arr.len() > 1{
+        host = arr[0].to_string();
+        port = match from_str(arr[1]){
+            Ok(s) => s,
+            Err(_) => port,
+        }
+    }
+    content = match health_check_content.is_empty() {
+        true => content,
+        false => health_check_content,
+    };
+
 
     let measure = async move {
         let dest = match network {
-            Network::Tcp => SocksAddr::Domain("www.google.com".to_string(), 80),
+            Network::Tcp => SocksAddr::Domain(host, port),
             Network::Udp => {
                 SocksAddr::Ip(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(8, 8, 8, 8)), 53))
             }
@@ -70,7 +89,7 @@ pub(self) async fn health_check(
                 };
                 match h.handle(&sess, stream).await {
                     Ok(mut stream) => {
-                        if stream.write_all(b"HEAD / HTTP/1.1\r\n\r\n").await.is_err() {
+                        if stream.write_all(content.as_bytes()).await.is_err() {
                             return Measure(idx, u128::MAX - 2);
                         }
                         let mut buf = vec![0u8; 1];
@@ -169,6 +188,8 @@ pub(self) async fn health_check_task(
     health_check_delay: u32,
     health_check_active: u32,
     last_active: Arc<Mutex<Instant>>,
+    health_check_addr:String,
+    health_check_content:String,
 ) {
     loop {
         let last_active = Instant::now()
@@ -188,6 +209,8 @@ pub(self) async fn health_check_task(
                     dns_client_cloned,
                     delay,
                     health_check_timeout,
+                    health_check_addr.clone(),
+                    health_check_content.clone()
                 )));
             }
             let mut measures = futures::future::join_all(checks).await;

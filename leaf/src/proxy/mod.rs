@@ -221,10 +221,12 @@ async fn bind_socket<T: BindSocket>(socket: &T, indicator: &SocketAddr) -> io::R
                             )
                         }
                         SocketAddr::V6(..) => {
+                            let IPV6_BOUND_IF = 125;
+
                             libc::setsockopt(
                                 socket.as_raw_fd(),
                                 libc::IPPROTO_IPV6,
-                                libc::IPV6_BOUND_IF,
+                                IPV6_BOUND_IF,
                                 &ifidx as *const _ as *const libc::c_void,
                                 std::mem::size_of::<libc::c_uint>() as libc::socklen_t,
                             )
@@ -373,6 +375,20 @@ async fn tcp_dial_task(dial_addr: SocketAddr) -> io::Result<(AnyStream, SocketAd
     Ok((Box::new(stream), dial_addr))
 }
 
+pub async fn get_addr(handler: &AnyOutboundHandler,
+) -> Option<(String,u16)>{
+    match handler.stream() {
+        Ok(stream) => {
+            match stream.connect_addr(){
+                OutboundConnect::Proxy(Network::Tcp, addr, port) => {
+                    Some((addr,port))
+                },
+                _ => None,
+            }
+        },
+        Err(_) => None,
+    }
+}
 pub async fn connect_stream_outbound(
     sess: &Session,
     dns_client: SyncDnsClient,

@@ -3709,6 +3709,8 @@ pub struct FailOverOutboundSettings {
     pub health_check_timeout: u32,
     pub health_check_delay: u32,
     pub health_check_active: u32,
+    pub health_check_addr: ::std::string::String,
+    pub health_check_content: ::std::string::String,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -3795,7 +3797,16 @@ impl FailOverOutboundSettings {
         self.health_check_timeout
     }
 
+
+    pub fn get_health_check_addr(&self) -> &str {
+        &self.health_check_addr
+    }
+    pub fn get_health_check_content(&self) -> &str {
+        &self.health_check_content
+    }
+
     // uint32 health_check_delay = 11;
+
 
 
     pub fn get_health_check_delay(&self) -> u32 {
@@ -3889,6 +3900,12 @@ impl ::protobuf::Message for FailOverOutboundSettings {
                     self.health_check_delay = tmp;
                 },
                 12 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.health_check_addr)?;
+                },
+                13 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.health_check_content)?;
+                },
+                14 =>{
                     if wire_type != ::protobuf::wire_format::WireTypeVarint {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
@@ -3941,7 +3958,13 @@ impl ::protobuf::Message for FailOverOutboundSettings {
             my_size += ::protobuf::rt::value_size(11, self.health_check_delay, ::protobuf::wire_format::WireTypeVarint);
         }
         if self.health_check_active != 0 {
-            my_size += ::protobuf::rt::value_size(12, self.health_check_active, ::protobuf::wire_format::WireTypeVarint);
+            my_size += ::protobuf::rt::value_size(14, self.health_check_active, ::protobuf::wire_format::WireTypeVarint);
+        }
+        if !self.health_check_addr.is_empty(){
+            my_size += ::protobuf::rt::string_size(12, &self.health_check_addr);
+        }
+        if !self.health_check_content.is_empty(){
+            my_size += ::protobuf::rt::string_size(12, &self.health_check_content);
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -3983,7 +4006,13 @@ impl ::protobuf::Message for FailOverOutboundSettings {
             os.write_uint32(11, self.health_check_delay)?;
         }
         if self.health_check_active != 0 {
-            os.write_uint32(12, self.health_check_active)?;
+            os.write_uint32(14, self.health_check_active)?;
+        }
+        if !self.health_check_addr.is_empty() {
+            os.write_string(12, &self.health_check_addr)?;
+        }
+        if !self.health_check_content.is_empty() {
+            os.write_string(13, &self.health_check_content)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -4040,6 +4069,8 @@ impl ::protobuf::Clear for FailOverOutboundSettings {
         self.health_check_delay = 0;
         self.health_check_active = 0;
         self.unknown_fields.clear();
+        self.health_check_addr.clear();
+        self.health_check_content.clear();
     }
 }
 

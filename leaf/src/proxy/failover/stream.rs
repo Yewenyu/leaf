@@ -37,7 +37,10 @@ impl Handler {
         health_check_timeout: u32,
         health_check_delay: u32,
         health_check_active: u32,
+        health_check_addr:String,
+        health_check_content:String,
         dns_client: SyncDnsClient,
+        
     ) -> (Self, Vec<AbortHandle>) {
         let mut abort_handles = Vec::new();
         let schedule = Arc::new(Mutex::new((0..actors.len()).collect()));
@@ -56,6 +59,8 @@ impl Handler {
                 health_check_delay,
                 health_check_active,
                 last_active.clone(),
+                health_check_addr,
+                health_check_content
             ));
             abort_handles.push(abort_handle);
             let health_check_task: BoxFuture<'static, ()> = Box::pin(abortable.map(|_| ()));

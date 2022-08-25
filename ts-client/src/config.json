@@ -1,20 +1,84 @@
 {
+    "log": {
+        "level": "debug",
+        "output":""
+    },
+    "dns": {
+        "servers": [
+            "114.114.114.114",
+            "1.1.1.1",
+            "8.8.8.8"
+        ]
+    },
     "inbounds": [
         {
             "protocol": "socks",
             "address": "127.0.0.1",
-            "port": 6666
+            "port": 7778
         }
     ],
     "outbounds": [
         {
+            "protocol": "failover",
+            "settings": {
+                "actors": [
+                    "ss",
+                    "failover_out1"
+                ]
+            },
+            "healthCheck":false,
+            "failover":true,
+            "tag": "failover_out"
+        },
+        {
+            "protocol": "failover",
+            "settings": {
+                "actors": [
+                    "ss",
+                    "ss1"
+                ]
+            },
+            "failTimeout":3,
+            "healthCheck":true,
+            "checkInterval":1000,
+            "failover":true,
+            "tag": "failover_out1"
+        },
+        {
             "protocol": "shadowsocks",
             "settings": {
-                "address": "45.88.42.58",
+                "address": "51.79.157.25",
                 "method": "aes-256-gcm",
-                "password": "7lBzAVEj1ZkH9926",
-                "port": 33669
-            }
+                "password": "8SpF232myYhn3CLh",
+                "port": 49001
+            },
+            "tag":"ss"
+        },
+        {
+            "protocol": "shadowsocks",
+            "settings": {
+                "address": "127.0.0.1",
+                "method": "chacha20-ietf-poly1305",
+                "password": "111111",
+                "port": 6667
+            },
+            "tag":"ss1"
+        },
+        {
+            "protocol": "direct",
+            "tag": "direct"
         }
-    ]
+    ],
+    "router":{
+        "domainResolve": true ,
+        "rules": [
+            {
+                "domainKeyword": [
+                    "ipinfo"
+                ],
+                "target": "direct"
+            }
+        ]
+    }
+    
 }
