@@ -28,13 +28,13 @@ fn main(){
                 "protocol": "failover",
                 "settings": {
                     "actors": [
-                        "ss",
-                        "ss2"
+                        "ss"
                     ],
                     "failTimeout":2,
                     "healthCheck":true,
                     "healthCheckTimeout":5,
                     "checkInterval":3,
+                    "healthCheckActive":3,
                     "healthCheckAddr":"captive.apple.com:80",
                     "healthCheckContent":"HEAD / HTTP/1.1\r\n\r\n",
                     "failover":true
@@ -44,32 +44,12 @@ fn main(){
             {
                 "protocol": "shadowsocks",
                 "settings": {
-                    "address": "127.0.0.1",
+                    "address": "117.28.246.20",
                     "method": "chacha20-ietf-poly1305",
-                    "password": "111111",
-                    "port": 6669
+                    "password": "sN3eQXMpW551a2D6",
+                    "port": 44824
                 },
                 "tag":"ss"
-            },
-            {
-                "protocol": "shadowsocks",
-                "settings": {
-                    "address": "127.0.0.1",
-                    "method": "chacha20-ietf-poly1305",
-                    "password": "111111",
-                    "port": 6668
-                },
-                "tag":"ss1"
-            },
-            {
-                "protocol": "shadowsocks",
-                "settings": {
-                    "address": "51.79.157.25",
-                    "method": "aes-256-gcm",
-                    "password": "2wr2172AjHjRG31p",
-                    "port": 39197
-                },
-                "tag":"ss2"
             },
             {
                 "protocol": "direct",

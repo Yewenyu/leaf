@@ -56,7 +56,7 @@ pub(self) async fn health_check(
         true => content,
         false => health_check_content,
     };
-
+    let hostName = Name::from_str(&format!("{}.",host));
 
     let measure = async move {
         let dest = match network {
@@ -128,7 +128,7 @@ pub(self) async fn health_check(
                             53,
                         ));
                         let mut msg = Message::new();
-                        let name = match Name::from_str("www.google.com.") {
+                        let name = match hostName {
                             Ok(n) => n,
                             Err(e) => {
                                 warn!("invalid domain name: {}", e);
