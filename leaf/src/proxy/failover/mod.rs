@@ -45,12 +45,37 @@ pub(self) async fn health_check(
     let mut port = 80;
     let mut content  = "HEAD / HTTP/1.1\r\n\r\n".to_string();
     let arr = health_check_addr.split(":").collect::<Vec<&str>>();
+    let mut dnsServer = "8.8.8.8".to_string();
     if arr.len() > 1{
         host = arr[0].to_string();
         port = match from_str(arr[1]){
             Ok(s) => s,
             Err(_) => port,
+        };
+        if arr.len() > 2{
+            dnsServer = arr[2].to_string()
         }
+    }
+    let dns_addr = dnsServer.split(".").collect::<Vec<&str>>();
+    let mut dns_socket_addr = Ipv4Addr::new(1, 1, 1, 1);
+    if dns_addr.len() > 3{
+        let a0:u8 = match from_str(dns_addr[0]){
+            Ok(s) => s,
+            Err(_) => 114,
+        };
+        let a1:u8 = match from_str(dns_addr[1]){
+            Ok(s) => s,
+            Err(_) => 114,
+        };
+        let a2:u8 = match from_str(dns_addr[2]){
+            Ok(s) => s,
+            Err(_) => 114,
+        };
+        let a3:u8 = match from_str(dns_addr[3]){
+            Ok(s) => s,
+            Err(_) => 114,
+        };
+        dns_socket_addr = Ipv4Addr::new(a0, a1, a2, a3);
     }
     content = match health_check_content.is_empty() {
         true => content,
@@ -62,7 +87,7 @@ pub(self) async fn health_check(
         let dest = match network {
             Network::Tcp => SocksAddr::Domain(host, port),
             Network::Udp => {
-                SocksAddr::Ip(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(8, 8, 8, 8)), 53))
+                SocksAddr::Ip(SocketAddr::new(IpAddr::V4(dns_socket_addr), 53))
             }
         };
 
@@ -124,7 +149,7 @@ pub(self) async fn health_check(
                 match h.handle(&sess, transport).await {
                     Ok(socket) => {
                         let addr = SocksAddr::Ip(SocketAddr::new(
-                            IpAddr::V4(Ipv4Addr::new(8, 8, 8, 8)),
+                            IpAddr::V4(dns_socket_addr),
                             53,
                         ));
                         let mut msg = Message::new();

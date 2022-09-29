@@ -84,6 +84,7 @@ pub mod ws;
 pub use datagram::{
     SimpleInboundDatagram, SimpleInboundDatagramRecvHalf, SimpleInboundDatagramSendHalf,
     SimpleOutboundDatagram, SimpleOutboundDatagramRecvHalf, SimpleOutboundDatagramSendHalf,
+    StdOutboundDatagram,
 };
 
 #[derive(Error, Debug)]
@@ -210,27 +211,22 @@ async fn bind_socket<T: BindSocket>(socket: &T, indicator: &SocketAddr) -> io::R
                         continue;
                     }
 
+                    let IPV6_BOUND_IF = 125;
                     let ret = match indicator {
-                        SocketAddr::V4(..) => {
-                            libc::setsockopt(
-                                socket.as_raw_fd(),
-                                libc::IPPROTO_IP,
-                                libc::IP_BOUND_IF,
-                                &ifidx as *const _ as *const libc::c_void,
-                                std::mem::size_of::<libc::c_uint>() as libc::socklen_t,
-                            )
-                        }
-                        SocketAddr::V6(..) => {
-                            let IPV6_BOUND_IF = 125;
-
-                            libc::setsockopt(
-                                socket.as_raw_fd(),
-                                libc::IPPROTO_IPV6,
-                                IPV6_BOUND_IF,
-                                &ifidx as *const _ as *const libc::c_void,
-                                std::mem::size_of::<libc::c_uint>() as libc::socklen_t,
-                            )
-                        }
+                        SocketAddr::V4(..) => libc::setsockopt(
+                            socket.as_raw_fd(),
+                            libc::IPPROTO_IP,
+                            libc::IP_BOUND_IF,
+                            &ifidx as *const _ as *const libc::c_void,
+                            std::mem::size_of::<libc::c_uint>() as libc::socklen_t,
+                        ),
+                        SocketAddr::V6(..) => libc::setsockopt(
+                            socket.as_raw_fd(),
+                            libc::IPPROTO_IPV6,
+                            IPV6_BOUND_IF,
+                            &ifidx as *const _ as *const libc::c_void,
+                            std::mem::size_of::<libc::c_uint>() as libc::socklen_t,
+                        ),
                     };
                     if ret == -1 {
                         last_err = Some(io::Error::last_os_error());
