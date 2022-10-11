@@ -1,8 +1,7 @@
 use std::{ffi::{CStr, CString}, os::raw::c_char, str::FromStr};
 
-
 #[no_mangle]
-pub extern "C" fn clash_run_with_config_string(rt_id: u16, config: *const c_char) -> *mut c_char {
+pub extern "C" fn clash_run_with_config_string(rt_id: u16, config: *const c_char) {
     let mut r = String::from_str("ok").expect("");
     if let Ok(config) = unsafe { CStr::from_ptr(config).to_str() } {
         let opts = leaf::StartOptions {
@@ -16,7 +15,8 @@ pub extern "C" fn clash_run_with_config_string(rt_id: u16, config: *const c_char
     } else {
         r = "config error".to_string();
     }
-    return CString::new(r).unwrap().into_raw();
+    log::info!("error:{}",r);
+   
 }
 
 

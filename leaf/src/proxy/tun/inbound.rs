@@ -1,5 +1,9 @@
 use std::net::SocketAddr;
-use std::sync::Arc;
+use std::sync::{Arc};
+
+use serde_json::to_vec;
+use tokio::sync::Mutex;
+use tokio::{net::UdpSocket, sync::mpsc};
 
 use anyhow::{anyhow, Result};
 use futures::{sink::SinkExt, stream::StreamExt};
@@ -156,7 +160,7 @@ async fn handle_inbound_datagram(
     }
 }
 
-pub fn new(
+pub fn new_fd(
     inbound: Inbound,
     dispatcher: Arc<Dispatcher>,
     nat_manager: Arc<NatManager>,
@@ -279,4 +283,121 @@ pub fn new(
         info!("start tun inbound");
         futures::future::select_all(futs).await;
     }))
+}
+
+pub fn new_tun_socks(
+    inbound: Inbound,
+    dispatcher: Arc<Dispatcher>,
+    nat_manager: Arc<NatManager>,
+) -> Result<Runner> {
+    let settings = TunInboundSettings::parse_from_bytes(&inbound.settings)?;
+
+    let address = inbound.address;
+    let port = inbound.port;
+
+    let addr = format!("{}:{}",address,port).parse::<SocketAddr>()?;
+    info!("listen tun socks at:{}",addr);
+    
+    // FIXME it's a bad design to have 2 lists in config while we need only one
+    let fake_dns_exclude = settings.fake_dns_exclude;
+    let fake_dns_include = settings.fake_dns_include;
+    if !fake_dns_exclude.is_empty() && !fake_dns_include.is_empty() {
+        return Err(anyhow!(
+            "fake DNS run in either include mode or exclude mode"
+        ));
+    }
+    let (fake_dns_mode, fake_dns_filters) = if !fake_dns_include.is_empty() {
+        (FakeDnsMode::Include, fake_dns_include)
+    } else {
+        (FakeDnsMode::Exclude, fake_dns_exclude)
+    };
+
+    
+
+    Ok(Box::pin(async move {
+        let fakedns = Arc::new(FakeDns::new(fake_dns_mode));
+        for filter in fake_dns_filters.into_iter() {
+            fakedns.add_filter(filter).await;
+        }
+        let inbound_tag = inbound.tag.clone();
+
+        let (stack, mut tcp_listener, udp_socket) = netstack::NetStack::new();
+        let (mut stack_sink, mut stack_stream) = stack.split();
+
+        let sock = Arc::new(UdpSocket::bind(addr).await.unwrap());
+        let r = sock.clone();
+        
+        let clientAddr : Arc<Mutex<SocketAddr>> = Arc::new(Mutex::new(addr));
+        let clientAddrSend = clientAddr.clone();
+
+        let mut futs: Vec<Runner> = Vec::new();
+
+        // Reads packet from stack and sends to TUN.
+        futs.push(Box::pin(async move {
+            while let Some(pkt) = stack_stream.next().await {
+                if let Ok(pkt) = pkt {
+                    let a = clientAddr.lock().await.clone();
+                    debug!("tun data to:{} -> len {}",a,pkt.len());
+                    let result = sock.send_to(&pkt, a).await;
+                    if let Err(e) = result{
+                        debug!("tun udp send err:{}",e)
+                    }
+                }
+            }
+        }));
+
+        // Reads packet from TUN and sends to stack.
+        futs.push(Box::pin(async move {
+            
+            let mut buf = [0u8; 1500];
+            
+            while let Ok((s,a)) = r.recv_from(&mut buf).await{
+                let mut addr_lock = clientAddrSend.lock().await;
+                *addr_lock = a;
+                debug!("tun data from udp:{} -> len {}",a,s);
+                let send_buf = buf[..s].to_vec();
+                
+                stack_sink.send(send_buf).await.unwrap();
+            }
+        }));
+
+        // Extracts TCP connections from stack and sends them to the dispatcher.
+        let inbound_tag_cloned = inbound_tag.clone();
+        let fakedns_cloned = fakedns.clone();
+        futs.push(Box::pin(async move {
+            while let Some((stream, local_addr, remote_addr)) = tcp_listener.next().await {
+                tokio::spawn(handle_inbound_stream(
+                    stream,
+                    local_addr,
+                    remote_addr,
+                    inbound_tag_cloned.clone(),
+                    dispatcher.clone(),
+                    fakedns_cloned.clone(),
+                ));
+            }
+        }));
+
+        // Receive and send UDP packets between netstack and NAT manager. The NAT
+        // manager would maintain UDP sessions and send them to the dispatcher.
+        futs.push(Box::pin(async move {
+            handle_inbound_datagram(udp_socket, inbound_tag, nat_manager, fakedns.clone()).await;
+        }));
+
+        info!("start tun inbound");
+        futures::future::select_all(futs).await;
+    }))
+}
+
+pub fn new(
+    inbound: Inbound,
+    dispatcher: Arc<Dispatcher>,
+    nat_manager: Arc<NatManager>,
+) -> Result<Runner> {
+    if inbound.address != ""{
+        info!("use tun socks");
+        new_tun_socks(inbound, dispatcher, nat_manager)
+    }else{
+        info!("use tun fd");
+        new_fd(inbound, dispatcher, nat_manager)
+    }
 }
