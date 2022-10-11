@@ -25,10 +25,10 @@ default-openssl = [
 auto-reload = ["leaf/auto-reload"]
 
 [dependencies]
-leaf = { path = "../leaf", default-features = false, optional = true,features = ["default","auto-reload"] }
+leaf = { path = "../leaf", default-features = false, optional = true,features = ["default","auto-reload","inbound-http"] }
 tokio = { version = "1", features = ["rt"] }
 futures = "0.3"
-
+log = { version = "0.4", features = ["std"] }
 
 [build-dependencies]
 bindgen = "0.59.2"
