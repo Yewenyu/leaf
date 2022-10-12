@@ -14,7 +14,7 @@ use crate::Runner;
 #[cfg(feature = "inbound-amux")]
 use crate::proxy::amux;
 #[cfg(feature = "inbound-http")]
-use crate::proxy::http;
+use crate::proxy::http_protocol;
 #[cfg(feature = "inbound-quic")]
 use crate::proxy::quic;
 #[cfg(feature = "inbound-shadowsocks")]
@@ -83,7 +83,7 @@ impl InboundManager {
                 }
                 #[cfg(feature = "inbound-http")]
                 "http" => {
-                    let stream = Arc::new(http::inbound::StreamHandler);
+                    let stream = Arc::new(http_protocol::inbound::StreamHandler);
                     let handler = Arc::new(proxy::inbound::Handler::new(
                         tag.clone(),
                         Some(stream),
