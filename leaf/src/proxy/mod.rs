@@ -47,7 +47,7 @@ pub mod drop;
 #[cfg(feature = "outbound-failover")]
 pub mod failover;
 #[cfg(feature = "inbound-http")]
-pub mod http;
+pub mod http_protocol;
 #[cfg(any(feature = "inbound-quic", feature = "outbound-quic"))]
 pub mod quic;
 #[cfg(feature = "outbound-redirect")]
