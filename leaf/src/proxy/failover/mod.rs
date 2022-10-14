@@ -216,6 +216,7 @@ pub(self) async fn health_check_task(
     health_check_addr:String,
     health_check_content:String,
 ) {
+    let mut first = true;
     loop {
         let last_active = Instant::now()
             .duration_since(*last_active.lock().await)
@@ -255,6 +256,10 @@ pub(self) async fn health_check_task(
                 .collect();
 
             debug!("priority after health check: {}", priorities.join(" > "));
+            if first{
+                first = false;
+                info!("get health info:{}",priorities.join(">"));
+            }
 
             let mut schedule = schedule.lock().await;
             schedule.clear();

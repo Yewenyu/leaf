@@ -21,6 +21,17 @@ fn main(){
                 "protocol": "socks",
                 "address": "127.0.0.1",
                 "port": 7778
+            },
+            {
+                "protocol": "tun",
+                "address": "0.0.0.0",
+                "port": 9998,
+                "settings": {
+                    "fd": 1,
+                    "fakeDnsInclude": [
+                        "google"
+                    ]
+                }
             }
         ],
         "outbounds": [
@@ -44,10 +55,10 @@ fn main(){
             {
                 "protocol": "shadowsocks",
                 "settings": {
-                    "address": "117.28.246.20",
+                    "address": "127.0.0.1",
                     "method": "chacha20-ietf-poly1305",
-                    "password": "sN3eQXMpW551a2D6",
-                    "port": 44824
+                    "password": "111111",
+                    "port": 6669
                 },
                 "tag":"ss"
             },
