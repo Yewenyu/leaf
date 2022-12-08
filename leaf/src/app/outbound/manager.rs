@@ -71,7 +71,7 @@ struct HandlerCacheEntry<'a> {
 impl OutboundManager {
     #[allow(clippy::type_complexity)]
     fn load_handlers(
-        outbounds: &protobuf::RepeatedField<Outbound>,
+        outbounds: &Vec<Outbound>,
         dns_client: SyncDnsClient,
         handlers: &mut HashMap<String, AnyOutboundHandler>,
         #[cfg(feature = "plugin")] external_handlers: &mut super::plugin::ExternalHandlers,
@@ -569,7 +569,7 @@ impl OutboundManager {
 
     #[allow(unused_variables)]
     fn load_selectors(
-        outbounds: &protobuf::RepeatedField<Outbound>,
+        outbounds: &Vec<Outbound>,
         handlers: &mut HashMap<String, AnyOutboundHandler>,
         #[cfg(feature = "plugin")] external_handlers: &mut super::plugin::ExternalHandlers,
         selectors: &mut super::Selectors,
@@ -648,7 +648,7 @@ impl OutboundManager {
     // TODO make this non-async?
     pub async fn reload(
         &mut self,
-        outbounds: &protobuf::RepeatedField<Outbound>,
+        outbounds: &Vec<Outbound>,
         dns_client: SyncDnsClient,
     ) -> Result<()> {
         // Save outound select states.
@@ -710,7 +710,7 @@ impl OutboundManager {
     }
 
     pub fn new(
-        outbounds: &protobuf::RepeatedField<Outbound>,
+        outbounds: &Vec<Outbound>,
         dns_client: SyncDnsClient,
     ) -> Result<Self> {
         let mut handlers: HashMap<String, AnyOutboundHandler> = HashMap::new();

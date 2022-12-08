@@ -122,7 +122,7 @@ ctrlc = ["tokio/signal"]
 # Common
 tokio = { version = "1", features = ["sync", "io-util", "net", "time", "rt", "rt-multi-thread"] }
 futures-util = "0.3"
-protobuf = "2"
+protobuf = "3.2"
 thiserror = "1.0"
 futures = "0.3"
 async-trait = "0.1"
@@ -154,7 +154,7 @@ ring = { version = "0.16", optional = true }
 # Router
 maxminddb = { version = "0.21", features = ["mmap"] }
 memmap2 = "0.3"
-cidr = { version = "0.1", default-features = false }
+cidr = { version = "0.2" }
 
 # DNS
 trust-dns-proto = { version = "0.20", default-features = false }
@@ -225,8 +225,8 @@ notify = { version = "5.0.0-pre.13", optional = true }
 
 # TUN
 [target.'cfg(any(target_os = "ios", target_os = "android", target_os = "macos", target_os = "linux"))'.dependencies]
-tun = { git = "https://github.com/eycorsican/rust-tun.git", branch = "upgrade", features = ["async"], optional = true }
-netstack-lwip = { git = "https://github.com/eycorsican/netstack-lwip.git", tag = "v0.3.3", optional = true }
+tun = { git = "https://github.com/eycorsican/rust-tun.git", branch = "fork", features = ["async"], optional = true }
+netstack-lwip = { git = "https://github.com/eycorsican/netstack-lwip.git", optional = true }
 
 [target.'cfg(any(target_os = "macos", target_os = "linux"))'.dependencies]
 pnet_datalink = { version = "0.28", package = "pnet_datalink" }
@@ -244,4 +244,4 @@ tokio = { version = "1", features = ["fs", "sync", "io-util", "net", "time", "rt
 [build-dependencies]
 cc = "1.0"
 bindgen = "0.59"
-protoc-rust = "2"
+protobuf-codegen = "3.2"
