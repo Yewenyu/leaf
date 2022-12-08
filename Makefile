@@ -1,4 +1,9 @@
 
+build-mac:
+	cargo build -p ts-client --target x86_64-apple-darwin --release
+	cbindgen --config ts-client/cbindgen.toml ts-client/src/lib.rs > target/x86_64-apple-darwin/release/ts.h
+	open target/x86_64-apple-darwin/release
+
 build-ios:
 	cargo build -p ts-client --target aarch64-apple-ios --release
 	cbindgen --config ts-client/cbindgen.toml ts-client/src/lib.rs > target/aarch64-apple-ios/release/ts.h

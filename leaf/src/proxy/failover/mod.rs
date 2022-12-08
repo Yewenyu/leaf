@@ -258,7 +258,7 @@ pub(self) async fn health_check_task(
             debug!("priority after health check: {}", priorities.join(" > "));
             if first{
                 first = false;
-                info!("get health info:{}",priorities.join(">"));
+                info!("get health info:<<<{}>>>",priorities.join(">"));
             }
 
             let mut schedule = schedule.lock().await;

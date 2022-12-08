@@ -55,10 +55,10 @@ fn main(){
             {
                 "protocol": "shadowsocks",
                 "settings": {
-                    "address": "127.0.0.1",
+                    "address": "103.127.243.31",
                     "method": "chacha20-ietf-poly1305",
-                    "password": "111111",
-                    "port": 6669
+                    "password": "z2Bv0pPlXMyIUez5",
+                    "port": 46857
                 },
                 "tag":"ss"
             },
