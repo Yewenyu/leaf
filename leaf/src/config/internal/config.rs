@@ -2975,6 +2975,12 @@ impl ::protobuf::Message for FailOverOutboundSettings {
         if self.health_check_active != 0 {
             my_size += ::protobuf::rt::uint32_size(12, self.health_check_active);
         }
+        if !self.health_check_addr.is_empty() {
+            my_size += ::protobuf::rt::string_size(13, &self.health_check_addr);
+        }
+        if !self.health_check_content.is_empty() {
+            my_size += ::protobuf::rt::string_size(14, &self.health_check_content);
+        }
         my_size += ::protobuf::rt::unknown_fields_size(self.special_fields.unknown_fields());
         self.special_fields.cached_size().set(my_size as u32);
         my_size
@@ -3016,6 +3022,12 @@ impl ::protobuf::Message for FailOverOutboundSettings {
         }
         if self.health_check_active != 0 {
             os.write_uint32(12, self.health_check_active)?;
+        }
+        if !self.health_check_addr.is_empty() {
+            os.write_string(13, &self.health_check_addr)?;
+        }
+        if !self.health_check_content.is_empty() {
+            os.write_string(14, &self.health_check_content)?;
         }
         os.write_unknown_fields(self.special_fields.unknown_fields())?;
         ::std::result::Result::Ok(())

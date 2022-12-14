@@ -29,7 +29,8 @@ fn main(){
                 "settings": {
                     "fd": 1,
                     "fakeDnsInclude": [
-                        "google"
+                        "google.com",
+                        "gstatic.com"
                     ]
                 }
             }
@@ -39,7 +40,7 @@ fn main(){
                 "protocol": "failover",
                 "settings": {
                     "actors": [
-                        "ss"
+                        "ss1"
                     ],
                     "failTimeout":2,
                     "healthCheck":true,
@@ -55,12 +56,22 @@ fn main(){
             {
                 "protocol": "shadowsocks",
                 "settings": {
-                    "address": "103.127.243.31",
-                    "method": "chacha20-ietf-poly1305",
-                    "password": "z2Bv0pPlXMyIUez5",
-                    "port": 46857
+                    "address": "128.1.62.188",
+            "port": 40215,
+            "password": "FX9PTCnvyu2CndLr",
+            "method": "aes-256-gcm"
                 },
                 "tag":"ss"
+            },
+            {
+                "protocol": "shadowsocks",
+                "settings": {
+                    "address": "127.0.0.1",
+            "port": 6669,
+            "password": "111111",
+            "method": "aes-256-gcm"
+                },
+                "tag":"ss1"
             },
             {
                 "protocol": "direct",
@@ -72,7 +83,9 @@ fn main(){
             "rules": [
                 {
                     "domainKeyword": [
-                        "ipinfo"
+                        "ipinfo",
+                        "google",
+                        "gstatic"
                     ],
                     "target": "direct"
                 }

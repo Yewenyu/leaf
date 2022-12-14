@@ -245,12 +245,12 @@ impl DnsClient {
                                     let elapsed = tokio::time::Instant::now().duration_since(start);
                                     let ttl = resp.answers().iter().next().unwrap().ttl();
                                     debug!(
-                                        "return {} ips (ttl {}) for {} from {} in {}ms",
+                                        "return {} ips (ttl {}) for {} from {} in {}ms : {:?}",
                                         ips.len(),
                                         ttl,
                                         host,
                                         server,
-                                        elapsed.as_millis(),
+                                        elapsed.as_millis(),ips,
                                     );
                                     let deadline = if let Some(d) =
                                         Instant::now().checked_add(Duration::from_secs(ttl.into()))
