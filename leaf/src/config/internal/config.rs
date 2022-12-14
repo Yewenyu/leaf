@@ -2927,6 +2927,13 @@ impl ::protobuf::Message for FailOverOutboundSettings {
                 96 => {
                     self.health_check_active = is.read_uint32()?;
                 },
+                106 => {
+                    self.health_check_addr = is.read_string()?;
+                },
+                114 => {
+                    self.health_check_content = is.read_string()?;
+                },
+
                 tag => {
                     ::protobuf::rt::read_unknown_or_skip_group(tag, is, self.special_fields.mut_unknown_fields())?;
                 },
