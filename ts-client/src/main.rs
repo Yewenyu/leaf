@@ -1,20 +1,24 @@
-use std::{env, thread, net::TcpStream, io::{Write, Read}, time::Duration};
+use std::{env, thread, net::TcpStream, io::{Write, Read}, time::Duration, fs::{self, OpenOptions}};
 use tokio;
 
 
 fn main(){
+    // let mut p =  env::current_dir().unwrap().to_str().unwrap();
+    let _file = OpenOptions::new()
+        .write(true)
+        .truncate(true) // 清空文件
+        .open("/Users/xiewenyu/Desktop/rust-project/leaf/logs.log");
     
+    // _ = fs::remove_file("/Users/xiewenyu/Desktop/rust-project/leaf/logs.log");
+
     let config = r#"
     {
         "log": {
-            "level": "debug"
+            "level": "debug",
+            "output": "/Users/xiewenyu/Desktop/rust-project/leaf/logs.log"
         },
-        "dns": {
-            "servers": [
-                "114.114.114.114",
-                "1.1.1.1",
-                "8.8.8.8"
-            ]
+        "dns":{
+            "servers":["114.114.114.114"]
         },
         "inbounds": [
             {
@@ -27,20 +31,21 @@ fn main(){
                 "address": "0.0.0.0",
                 "port": 9998,
                 "settings": {
-                    "fd": 1,
-                    "fakeDnsInclude": [
-                        "google.com",
-                        "gstatic.com"
-                    ]
-                }
+                    "fd": 1
+                },
+                "fakeDnsInclude":["google.com","gstatic.com"]
             }
         ],
         "outbounds": [
             {
+                "protocol": "direct",
+                "tag": "direct"
+            },
+            {
                 "protocol": "failover",
                 "settings": {
                     "actors": [
-                        "ss1"
+                        "ss"
                     ],
                     "failTimeout":2,
                     "healthCheck":true,
@@ -56,9 +61,9 @@ fn main(){
             {
                 "protocol": "shadowsocks",
                 "settings": {
-                    "address": "128.1.62.188",
-            "port": 40215,
-            "password": "FX9PTCnvyu2CndLr",
+                    "address": "60.12.124.214",
+            "port": 39807,
+            "password": "jufR4G3YG1zACQ08",
             "method": "aes-256-gcm"
                 },
                 "tag":"ss"
@@ -67,15 +72,11 @@ fn main(){
                 "protocol": "shadowsocks",
                 "settings": {
                     "address": "127.0.0.1",
-            "port": 6669,
-            "password": "111111",
-            "method": "aes-256-gcm"
+                    "port": 6669,
+                    "password": "111111",
+                    "method": "aes-256-gcm"
                 },
                 "tag":"ss1"
-            },
-            {
-                "protocol": "direct",
-                "tag": "direct"
             }
         ],
         "router":{
@@ -84,10 +85,16 @@ fn main(){
                 {
                     "domainKeyword": [
                         "ipinfo",
-                        "google",
-                        "gstatic"
+                        "iqiyi",
+                        "qy"
                     ],
-                    "target": "direct"
+                    "target": "failover_out"
+                },
+                {
+                    "ip": [
+                        "114.114.114.114"
+                    ],
+                    "target": "failover_out"
                 }
             ]
         }

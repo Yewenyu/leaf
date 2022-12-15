@@ -198,7 +198,7 @@ impl DnsClient {
         let server = SocksAddr::from(server);
         let mut last_err = None;
         for _i in 0..*option::MAX_DNS_RETRIES {
-            debug!("looking up host {} on {}", host, server);
+            debug!("looking up host {} on {},direct:{}", host, server,is_direct);
             let start = tokio::time::Instant::now();
             match s.send_to(&request, &server).await {
                 Ok(_) => {

@@ -45,6 +45,7 @@ async fn handle_inbound_stream(
     // Whether to override the destination according to Fake DNS.
     if fakedns.is_fake_ip(&remote_addr.ip()).await {
         if let Some(domain) = fakedns.query_domain(&remote_addr.ip()).await {
+            debug!("fake ip {} override {}",remote_addr.ip(),domain);
             sess.destination = SocksAddr::Domain(domain, remote_addr.port());
         } else {
             // Although requests targeting fake IPs are assumed
