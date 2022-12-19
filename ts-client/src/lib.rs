@@ -9,6 +9,7 @@ pub extern "C" fn clash_run_with_config_string(rt_id: u16, config: *const c_char
             auto_reload: false,
             runtime_opt: leaf::RuntimeOption::SingleThread,
         };
+        hpts::start_with_json(config.to_string());
         if let Err(e) = leaf::start(rt_id, opts) {
             r = e.to_string()
         }

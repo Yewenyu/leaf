@@ -20,6 +20,10 @@ fn main(){
         "dns":{
             "servers":["1.1.1.1","8.8.8.8","114.114.114.114"]
         },
+        "http":{
+            "http":"127.0.0.1:7779",
+            "socks":"127.0.0.1:7778"
+        },
         "inbounds": [
             {
                 "protocol": "socks",
@@ -84,17 +88,9 @@ fn main(){
             "rules": [
                 {
                     "domainKeyword": [
-                        "ipinfo",
-                        "iqiyi",
-                        "qy"
+                        "ipinfo"
                     ],
-                    "target": "failover_out"
-                },
-                {
-                    "ip": [
-                        "114.114.114.114"
-                    ],
-                    "target": "failover_out"
+                    "target": "direct"
                 }
             ]
         }
@@ -117,11 +113,14 @@ fn main(){
     
     //     }
     // });
+    
+
     let opts = leaf::StartOptions {
         config: leaf::Config::Str(config.to_string()),
         auto_reload: false,
         runtime_opt: leaf::RuntimeOption::MultiThreadAuto(2097152),
     };
+    hpts::start_with_json(config.to_string());
     if let Err(e) = leaf::start(0, opts) {
         panic!("{}",e);
     }
