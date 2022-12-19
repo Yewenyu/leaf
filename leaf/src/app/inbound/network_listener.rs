@@ -130,6 +130,7 @@ async fn handle_inbound_tcp_stream(
     let local_addr = stream
         .local_addr()
         .unwrap_or_else(|_| *crate::option::UNSPECIFIED_BIND_ADDR);
+    debug!("tcp stream remoate:{},local:{}",source,local_addr);
     let sess = Session {
         network: Network::Tcp,
         source,

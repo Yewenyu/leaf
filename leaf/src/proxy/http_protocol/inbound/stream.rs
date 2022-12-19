@@ -36,6 +36,7 @@ impl Service<Request<Body>> for ProxyService {
     type Response = Response<Body>;
 
     fn call(&mut self, req: Request<Body>) -> Self::Future {
+        debug!("http proxyserver : header{:?},body{:?},ext:{:?},url:{}",req.headers(),req.body(),req.extensions(),req.uri());
         self.uri = req.uri().to_string();
         Box::pin(future::ready(Ok(Response::builder()
             .status(200)

@@ -10,15 +10,15 @@ fn main(){
         .open("/Users/xiewenyu/Desktop/rust-project/leaf/logs.log");
     
     // _ = fs::remove_file("/Users/xiewenyu/Desktop/rust-project/leaf/logs.log");
+    // "output": "/Users/xiewenyu/Desktop/rust-project/leaf/logs.log"
 
     let config = r#"
     {
         "log": {
-            "level": "debug",
-            "output": "/Users/xiewenyu/Desktop/rust-project/leaf/logs.log"
+            "level": "debug"
         },
         "dns":{
-            "servers":["114.114.114.114"]
+            "servers":["1.1.1.1","8.8.8.8","114.114.114.114"]
         },
         "inbounds": [
             {
@@ -45,7 +45,7 @@ fn main(){
                 "protocol": "failover",
                 "settings": {
                     "actors": [
-                        "ss"
+                        "ss1"
                     ],
                     "failTimeout":2,
                     "healthCheck":true,
