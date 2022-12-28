@@ -1,5 +1,4 @@
-use std::{env, thread, net::TcpStream, io::{Write, Read}, time::Duration, fs::{self, OpenOptions}};
-use tokio;
+use std::{env, thread, net::TcpStream, io::{Write, Read}, time::Duration, fs::{self, OpenOptions}, error::Error, collections::HashMap};
 
 
 fn main(){
@@ -8,6 +7,10 @@ fn main(){
         .write(true)
         .truncate(true) // 清空文件
         .open("/Users/xiewenyu/Desktop/rust-project/leaf/logs.log");
+
+    //     doh("www.google.com.hk".to_string());
+    // udp_example();
+  
     
     // _ = fs::remove_file("/Users/xiewenyu/Desktop/rust-project/leaf/logs.log");
     // "output": "/Users/xiewenyu/Desktop/rust-project/leaf/logs.log"
@@ -15,10 +18,11 @@ fn main(){
     let config = r#"
     {
         "log": {
-            "level": "debug"
+            "level": "debug",
+            "output": "/Users/xiewenyu/Desktop/rust-project/leaf/logs.log"
         },
         "dns":{
-            "servers":["1.1.1.1","8.8.8.8","114.114.114.114"]
+            "servers":["1.1.1.1"]
         },
         "http":{
             "http":"127.0.0.1:7779",
@@ -91,6 +95,12 @@ fn main(){
                         "ipinfo"
                     ],
                     "target": "direct"
+                },
+                {
+                    "ip": [
+                        "1.1.1.1"
+                    ],
+                    "target": "direct"
                 }
             ]
         }
@@ -128,4 +138,77 @@ fn main(){
 
     print!("end")
 
+}
+
+use rustdns::Message;
+use rustdns::types::*;
+use std::net::UdpSocket;
+
+fn udp_example() -> std::io::Result<()> {
+    // A DNS Message can be easily constructed
+    let mut m = Message::default();
+    m.add_question("www.google.com.hk", Type::A, Class::Internet);
+    m.add_extension(Extension {   // Optionally add a EDNS extension
+        payload_size: 4096,       // which supports a larger payload size.
+        ..Default::default()
+    });
+
+    // Setup a UDP socket for sending to a DNS server.
+    let socket = UdpSocket::bind("0.0.0.0:0")?;
+    socket.set_read_timeout(Some(Duration::new(5, 0)))?;
+    socket.connect("8.8.8.8:53")?; // Google's Public DNS Servers
+
+    // Encode the DNS Message as a Vec<u8>.
+    let question = m.to_vec()?;
+
+    // Send to the server.
+    socket.send(&question)?;
+
+    // Wait for a response from the DNS server.
+    let mut resp = [0; 4096];
+    let len = socket.recv(&mut resp)?;
+    // Take the response bytes and turn it into another DNS Message.
+    let answer = Message::from_slice(&resp[0..len])?;
+    println!("DNS Response:\n{}", answer);
+    let len = socket.recv(&mut resp)?;
+    // Take the response bytes and turn it into another DNS Message.
+    let answer = Message::from_slice(&resp[0..len])?;
+
+    // Now do something with `answer`, in this case print it!
+    println!("DNS Response:\n{}", answer);
+
+    Ok(())
+}
+
+use reqwest::{Url};
+use serde_json::Value;
+
+fn doh(host:String) -> Result<Vec<String>, Box<dyn Error>>{
+    let url = Url::parse(format!("https://cloudflare-dns.com/dns-query?name={}",host).as_str())?;
+    
+    let client = reqwest::blocking::Client::new();
+
+    let mut response = client.get(url)
+    .header("accept", "application/dns-json")
+    .send()?;
+
+    let result = response.json::<HashMap<String, Value>>()?;
+    
+    let answers = result.get("Answer").map(|v|{
+        v.as_array()
+    });
+
+    if let Some(Some(answers)) = answers {
+        let v:Vec<String> = answers.iter().map(|v|{
+            if let Some(Some(Some(v))) = v.as_object().map(|v|{v.get("data").map(|v|{v.as_str()})}) {
+                return v.to_string();
+            }
+            return "".to_string();
+        }).collect();
+
+        return Ok(v);
+    }
+
+let v : Vec<String> = Vec::new();
+return Ok(v)
 }

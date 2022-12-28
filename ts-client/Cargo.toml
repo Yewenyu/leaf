@@ -28,9 +28,16 @@ auto-reload = ["leaf/auto-reload"]
 [dependencies]
 leaf = { path = "../leaf", default-features = false, optional = true,features = ["default","auto-reload","inbound-http"] }
 hpts = { path = "hpts" }
-tokio = { version = "1", features = ["rt"] }
+tokio = { version = "*", features = ["rt"] }
 futures = "0.3"
-log = { version = "0.4", features = ["std"] }
+log = { version = "*", features = ["std"] }
+rustdns ="*"
+
+serde_json = { version = "*", features = ["raw_value"] }
+# serde = { version = "*"}
+# serde_derive ="*"
+reqwest = { version = "0.11", features = ["blocking", "json"] }
+
 
 [build-dependencies]
 bindgen = "0.59.2"

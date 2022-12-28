@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::error::Error;
 use std::net::{IpAddr, SocketAddr};
 use std::str::FromStr;
 use std::sync::{Arc, Weak};
@@ -9,6 +10,8 @@ use futures::future::select_ok;
 use log::*;
 use lru::LruCache;
 use rand::{rngs::StdRng, Rng, SeedableRng};
+use reqwest::Url;
+use serde_json::Value;
 use tokio::sync::Mutex as TokioMutex;
 use tokio::time::timeout;
 use trust_dns_proto::{
@@ -175,6 +178,13 @@ impl DnsClient {
         host: &str,
         server: &SocketAddr,
     ) -> Result<CacheEntry> {
+
+        if is_direct{
+            let r = self.startDoh(&host.to_string());
+            if r.is_ok(){
+                return Ok(r.unwrap());
+            }
+        }
         let socket = if is_direct {
             let socket = self.new_udp_socket(server).await?;
             Box::new(StdOutboundDatagram::new(socket))
@@ -245,7 +255,7 @@ impl DnsClient {
                                     let elapsed = tokio::time::Instant::now().duration_since(start);
                                     let ttl = resp.answers().iter().next().unwrap().ttl();
                                     debug!(
-                                        "return {} ips (ttl {}) for {} from {} in {}ms : {:?}",
+                                        "looking up return {} ips (ttl {}) for {} from {} in {}ms : {:?}",
                                         ips.len(),
                                         ttl,
                                         host,
@@ -529,6 +539,64 @@ impl DnsClient {
 
         Err(last_err.unwrap_or_else(|| anyhow!("could not resolve to any address")))
     }
+
+    fn startDoh(&self,host:&String) -> Result<CacheEntry,()> {
+        let start = tokio::time::Instant::now();
+        let ips = doh(host.to_string());
+        let interval = tokio::time::Instant::now().checked_duration_since(start).unwrap();
+        match ips {
+            Ok(v) =>{
+                if v.len() > 0{
+                    let ips : Vec<IpAddr>  = v.iter().map(|v|{
+                        IpAddr::from_str(v).ok()
+                    }).filter(|v|{v.is_some()}).map(|v|{v.unwrap()}).collect();
+                    let deadline = Instant::now().checked_add(interval).unwrap();
+                    if ips.len() > 0{
+                        let entry = CacheEntry { 
+                            ips,  deadline};
+                        debug!("looking dns {} from doh: result:{:?} time {:?}",host,v,interval);
+                        return Ok(entry);
+                    }
+                }
+            }
+            Err(_) => {
+                return Err(())
+            }
+        }
+
+        return Err(());
+    }
 }
 
 impl UdpConnector for DnsClient {}
+
+
+fn doh(host:String) -> Result<Vec<String>, Box<dyn Error>>{
+        let url = Url::parse(format!("https://cloudflare-dns.com/dns-query?name={}",host).as_str())?;
+        
+        let client = reqwest::blocking::Client::builder().timeout(Duration::from_secs(2)).build()?;
+
+        let mut response = client.get(url)
+        .header("accept", "application/dns-json")
+        .send()?;
+
+        let result = response.json::<HashMap<String, Value>>()?;
+        
+        let answers = result.get("Answer").map(|v|{
+            v.as_array()
+        });
+
+        if let Some(Some(answers)) = answers {
+            let v:Vec<String> = answers.iter().map(|v|{
+                if let Some(Some(Some(v))) = v.as_object().map(|v|{v.get("data").map(|v|{v.as_str()})}) {
+                    return v.to_string();
+                }
+                return "".to_string();
+            }).collect();
+
+            return Ok(v);
+        }
+
+    let v : Vec<String> = Vec::new();
+    return Ok(v)
+}
