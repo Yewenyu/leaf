@@ -36,6 +36,7 @@ pub struct DnsClient {
     hosts: HashMap<String, Vec<IpAddr>>,
     ipv4_cache: Arc<TokioMutex<LruCache<String, CacheEntry>>>,
     ipv6_cache: Arc<TokioMutex<LruCache<String, CacheEntry>>>,
+    last_doh_timeout_time:Arc<TokioMutex<Vec<Instant>>>,
 }
 
 impl DnsClient {
@@ -89,6 +90,7 @@ impl DnsClient {
             hosts,
             ipv4_cache,
             ipv6_cache,
+            last_doh_timeout_time:Arc::new(TokioMutex::new(Vec::new())),
         })
     }
 
@@ -180,7 +182,7 @@ impl DnsClient {
     ) -> Result<CacheEntry> {
 
         if is_direct{
-            let r = self.startDoh(&host.to_string());
+            let r = self.startdoh(&host.to_string()).await;
             if r.is_ok(){
                 return Ok(r.unwrap());
             }
@@ -540,27 +542,35 @@ impl DnsClient {
         Err(last_err.unwrap_or_else(|| anyhow!("could not resolve to any address")))
     }
 
-    fn startDoh(&self,host:&String) -> Result<CacheEntry,()> {
-        let start = tokio::time::Instant::now();
-        let ips = doh(host.to_string());
-        let interval = tokio::time::Instant::now().checked_duration_since(start).unwrap();
+    async fn startdoh(&self,host:&String) -> Result<CacheEntry,()> {
+        let start = Instant::now();
+        let mut last = self.last_doh_timeout_time.lock().await;
+        if last.len() > 0{
+            let interval = start.duration_since(*last.last().unwrap());
+            let sec = interval.as_secs();
+            if sec < 3{
+                return Err(());
+            }
+            last.clear();
+        }
+        let ips = doh(host.to_string()).await;
+        let interval = Instant::now().checked_duration_since(start).unwrap();
         match ips {
             Ok(v) =>{
                 if v.len() > 0{
-                    let ips : Vec<IpAddr>  = v.iter().map(|v|{
-                        IpAddr::from_str(v).ok()
+                    let ips : Vec<IpAddr> = v.iter().map(|v|{
+                        IpAddr::from_str(&v.0).ok()
                     }).filter(|v|{v.is_some()}).map(|v|{v.unwrap()}).collect();
-                    let deadline = Instant::now().checked_add(interval).unwrap();
-                    if ips.len() > 0{
-                        let entry = CacheEntry { 
-                            ips,  deadline};
-                        debug!("looking dns {} from doh: result:{:?} time {:?}",host,v,interval);
-                        return Ok(entry);
-                    }
+                    let ttl = v.last().unwrap().1;
+                    let deadline = Instant::now().checked_add(Duration::from_secs(ttl)).unwrap();
+                    let entry = CacheEntry { 
+                        ips,  deadline};
+                    debug!("looking dns {} from doh: result:{:?} time {:?}",host,v,interval);
+                    return Ok(entry);
                 }
             }
             Err(_) => {
-                return Err(())
+                last.push(Instant::now());
             }
         }
 
@@ -571,32 +581,35 @@ impl DnsClient {
 impl UdpConnector for DnsClient {}
 
 
-fn doh(host:String) -> Result<Vec<String>, Box<dyn Error>>{
-        let url = Url::parse(format!("https://cloudflare-dns.com/dns-query?name={}",host).as_str())?;
+async fn doh(host:String) -> Result<Vec<(String,u64)>, Box<dyn Error>>{
+        let url = Url::parse(format!("https://1.1.1.1/dns-query?name={}",host).as_str())?;
         
-        let client = reqwest::blocking::Client::builder().timeout(Duration::from_secs(2)).build()?;
+        let client = reqwest::Client::builder().timeout(Duration::from_secs(2)).build()?;
 
-        let mut response = client.get(url)
+        let response = client.get(url)
         .header("accept", "application/dns-json")
-        .send()?;
+        .send().await?;
 
-        let result = response.json::<HashMap<String, Value>>()?;
+        let result = response.json::<HashMap<String, Value>>().await?;
         
         let answers = result.get("Answer").map(|v|{
             v.as_array()
         });
 
         if let Some(Some(answers)) = answers {
-            let v:Vec<String> = answers.iter().map(|v|{
-                if let Some(Some(Some(v))) = v.as_object().map(|v|{v.get("data").map(|v|{v.as_str()})}) {
-                    return v.to_string();
+            let v:Vec<(String,u64)> = answers.iter().map(|v|{
+                if let Some((Some(Some(v)),Some(Some(t)))) = v.as_object().map(|v|{
+                    (v.get("data").map(|v|{v.as_str()}),
+                    v.get("TTL").map(|v|{v.as_u64()}))
+                }) {
+                    return Some((v.to_string(),t));
                 }
-                return "".to_string();
-            }).collect();
+                return None;
+            }).filter(|v|{v.is_some()}).map(|v|{v.unwrap()}).collect();
 
             return Ok(v);
         }
 
-    let v : Vec<String> = Vec::new();
+    let v : Vec<(String,u64)> = Vec::new();
     return Ok(v)
 }

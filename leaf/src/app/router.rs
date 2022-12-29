@@ -514,7 +514,7 @@ impl Router {
                 self.dns_client
                     .read()
                     .await
-                    .lookup(
+                    .direct_lookup(
                         sess.destination
                             .domain()
                             .ok_or_else(|| anyhow!("illegal domain name"))?,
