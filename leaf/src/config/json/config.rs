@@ -48,6 +48,7 @@ pub struct QuicInboundSettings {
     pub certificate: Option<String>,
     #[serde(rename = "certificateKey")]
     pub certificate_key: Option<String>,
+    pub alpn: Option<Vec<String>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -156,6 +157,7 @@ pub struct QuicOutboundSettings {
     #[serde(rename = "serverName")]
     pub server_name: Option<String>,
     pub certificate: Option<String>,
+    pub alpn: Option<Vec<String>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -441,6 +443,9 @@ pub fn to_internal(json: &mut Config) -> Result<internal::Config> {
                             let path = asset_loc.join(key).to_string_lossy().to_string();
                             settings.certificate_key = path;
                         }
+                    }
+                    if let Some(ext_alpns) = ext_settings.alpn {
+                        settings.alpn = ext_alpns.clone();
                     }
                     let settings = settings.write_to_bytes().unwrap();
                     inbound.settings = settings;
@@ -817,6 +822,9 @@ pub fn to_internal(json: &mut Config) -> Result<internal::Config> {
                                 let path = asset_loc.join(cert).to_string_lossy().to_string();
                                 settings.certificate = path;
                             }
+                        }
+                        if let Some(ext_alpns) = ext_settings.alpn {
+                            settings.alpn = ext_alpns.clone();
                         }
                     }
                     let settings = settings.write_to_bytes().unwrap();
