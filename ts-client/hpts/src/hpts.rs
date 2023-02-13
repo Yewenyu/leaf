@@ -2,7 +2,8 @@ use futures::future::try_join;
 use httparse;
 use log::{debug, error, trace};
 use std::error::Error;
-use std::net::{IpAddr, SocketAddr};
+use std::net::{IpAddr, SocketAddr, Ipv6Addr};
+use std::str::FromStr;
 use std::sync::Arc;
 use tokio::io;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -44,13 +45,20 @@ pub(crate) async fn hpts_bridge(ctx: HptsContext) -> Result<(), Box<dyn Error>> 
         return Ok(());
     }
     ctx.pos += n;
-    if !req.parse(buf).unwrap().is_complete() {
-        error!("incomplete http request");
-        return Err(Box::new(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            "incomplete http request",
-        )));
+    let r = req.parse(buf);
+    match r {
+        Ok(r) => {
+            if !r.is_complete() {
+                error!("incomplete http request");
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "incomplete http request",
+                )));
+            }
+        },
+        Err(_) =>{}
     }
+    
 
     let mut port = 80;
     if req.method.unwrap().to_lowercase() == "connect" {
@@ -71,11 +79,19 @@ pub(crate) async fn hpts_bridge(ctx: HptsContext) -> Result<(), Box<dyn Error>> 
     for i in 0..16 {
         let h = headers[i];
         if h.name.to_lowercase() == "host" {
-            host = std::str::from_utf8(h.value).unwrap();
+            host = std::str::from_utf8(h.value).map_or("", |x|{x});
+            let isipv6 = Ipv6Addr::from_str(host).map_or(false, |_|{true});
+            if isipv6{
+                return Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "can not handle ipv6",
+                )));
+            }
+
             let host_port = host.split(":").collect::<Vec<&str>>();
-            host = host_port[0];
             if host_port.len() > 1 {
-                port = host_port[1].parse().unwrap();
+                host = host_port[0];
+                port = host_port[1].parse().map_or(port, |x|{x})
             }
             break;
         }

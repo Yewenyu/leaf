@@ -11,7 +11,7 @@ repository = "https://github.com/chux0519/hpts"
 tokio = { version = "1", features = ["full"] }
 httparse = "1.3.4"
 futures = "0.3.0"
-log = { version = "0.4", features = ["std"] }
+log = { version = "*", features = ["std"] }
 serde = { version = "*"}
 serde_derive ="*"
 serde_json = "*"

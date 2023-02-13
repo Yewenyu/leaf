@@ -18,8 +18,7 @@ fn main(){
     let config = r#"
     {
         "log": {
-            "level": "debug",
-            "output": "/Users/xiewenyu/Desktop/rust-project/leaf/logs.log"
+            "level": "debug"
         },
         "dns":{
             "servers":["1.1.1.1"]
@@ -46,14 +45,10 @@ fn main(){
         ],
         "outbounds": [
             {
-                "protocol": "direct",
-                "tag": "direct"
-            },
-            {
                 "protocol": "failover",
                 "settings": {
                     "actors": [
-                        "ss1"
+                        "ss"
                     ],
                     "failTimeout":2,
                     "healthCheck":true,
@@ -69,9 +64,9 @@ fn main(){
             {
                 "protocol": "shadowsocks",
                 "settings": {
-                    "address": "60.12.124.214",
-            "port": 39807,
-            "password": "jufR4G3YG1zACQ08",
+                    "address": "38.147.174.198.globalssh.cn",
+            "port": 10080,
+            "password": "transocks",
             "method": "aes-256-gcm"
                 },
                 "tag":"ss"
@@ -85,6 +80,10 @@ fn main(){
                     "method": "aes-256-gcm"
                 },
                 "tag":"ss1"
+            },
+            {
+                "protocol": "direct",
+                "tag": "direct"
             }
         ],
         "router":{
