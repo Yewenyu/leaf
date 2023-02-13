@@ -21,7 +21,8 @@ fn main(){
             "level": "debug"
         },
         "dns":{
-            "servers":["1.1.1.1"]
+            "servers":["1.1.1.1"],
+            "dohkeys":["1.1.1.1"]
         },
         "http":{
             "http":"127.0.0.1:7779",
@@ -64,7 +65,7 @@ fn main(){
             {
                 "protocol": "shadowsocks",
                 "settings": {
-                    "address": "38.147.174.198.globalssh.cn",
+                    "address": "38.147.174.43",
             "port": 10080,
             "password": "transocks",
             "method": "aes-256-gcm"

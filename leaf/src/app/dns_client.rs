@@ -37,6 +37,7 @@ pub struct DnsClient {
     ipv4_cache: Arc<TokioMutex<LruCache<String, CacheEntry>>>,
     ipv6_cache: Arc<TokioMutex<LruCache<String, CacheEntry>>>,
     last_doh_timeout_time:Arc<TokioMutex<Vec<Instant>>>,
+    dohKeys: Arc<Vec<String>>,
 }
 
 impl DnsClient {
@@ -69,6 +70,14 @@ impl DnsClient {
         parsed_hosts
     }
 
+    fn load_dohkeys(dns: &crate::config::Dns) -> Vec<String> {
+        let mut keys = Vec::new();
+        for key in &dns.dohKeys {
+            keys.push(key.to_owned());
+        }
+        keys
+    }
+
     pub fn new(dns: &protobuf::MessageField<crate::config::Dns>) -> Result<Self> {
         let dns = if let Some(dns) = dns.as_ref() {
             dns
@@ -77,12 +86,14 @@ impl DnsClient {
         };
         let servers = Self::load_servers(dns)?;
         let hosts = Self::load_hosts(dns);
+        let dohkeys = Self::load_dohkeys(dns);
         let ipv4_cache = Arc::new(TokioMutex::new(LruCache::<String, CacheEntry>::new(
             *option::DNS_CACHE_SIZE,
         )));
         let ipv6_cache = Arc::new(TokioMutex::new(LruCache::<String, CacheEntry>::new(
             *option::DNS_CACHE_SIZE,
         )));
+
 
         Ok(Self {
             dispatcher: None,
@@ -91,6 +102,7 @@ impl DnsClient {
             ipv4_cache,
             ipv6_cache,
             last_doh_timeout_time:Arc::new(TokioMutex::new(Vec::new())),
+            dohKeys:Arc::new(dohkeys),
         })
     }
 
@@ -553,7 +565,7 @@ impl DnsClient {
             }
             last.clear();
         }
-        let ips = doh(host.to_string()).await;
+        let ips = doh(host.to_string(),self.dohKeys.to_vec()).await;
         let interval = Instant::now().checked_duration_since(start).unwrap();
         match ips {
             Ok(v) =>{
@@ -581,7 +593,7 @@ impl DnsClient {
 impl UdpConnector for DnsClient {}
 
 
-async fn doh(host:String) -> Result<Vec<(String,u64)>, Box<dyn Error>>{
+async fn cloud_fare_doh(host:String) -> Result<Vec<(String,u64)>, Box<dyn Error>>{
         let url = Url::parse(format!("https://1.1.1.1/dns-query?name={}",host).as_str())?;
         
         let client = reqwest::Client::builder().timeout(Duration::from_secs(2)).build()?;
@@ -612,4 +624,20 @@ async fn doh(host:String) -> Result<Vec<(String,u64)>, Box<dyn Error>>{
 
     let v : Vec<(String,u64)> = Vec::new();
     return Ok(v)
+}
+
+async fn doh(host:String,keys:Vec<String>) -> Result<Vec<(String,u64)>, ()>{
+    let mut v : Vec<(String,u64)> = Vec::new();
+    for key in keys{
+        if key == "1.1.1.1"{
+            match cloud_fare_doh(host.to_owned()).await{
+                Ok( r) =>{
+                    v.append(&mut r.to_vec());
+                }
+                Err(_) =>{}
+            }
+        }
+    }
+
+    return Ok(v);
 }

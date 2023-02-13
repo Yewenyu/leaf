@@ -37,6 +37,8 @@ pub struct Dns {
     // special fields
     // @@protoc_insertion_point(special_field:Dns.special_fields)
     pub special_fields: ::protobuf::SpecialFields,
+
+    pub dohKeys: ::std::vec::Vec<::std::string::String>,
 }
 
 impl<'a> ::std::default::Default for &'a Dns {
