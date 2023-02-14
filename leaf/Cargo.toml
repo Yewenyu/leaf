@@ -223,7 +223,7 @@ warp = { version = "0.3", default-features = false, optional = true }
 # Auto reload
 notify = { version = "5.0.0-pre.13", optional = true }
 
-reqwest = { version = "0.11", features = ["blocking", "json"] }
+reqwest = { version = "0.11", features = ["blocking", "json","socks"] }
 
 # TUN
 [target.'cfg(any(target_os = "ios", target_os = "android", target_os = "macos", target_os = "linux"))'.dependencies]

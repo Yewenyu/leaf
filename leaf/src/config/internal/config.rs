@@ -39,6 +39,7 @@ pub struct Dns {
     pub special_fields: ::protobuf::SpecialFields,
 
     pub doh_keys: ::std::collections::HashMap<::std::string::String, ::std::string::String>,
+    pub doh_proxy_addr : String,
 }
 
 impl<'a> ::std::default::Default for &'a Dns {

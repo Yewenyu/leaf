@@ -18,11 +18,12 @@ fn main(){
     let config = r#"
     {
         "log": {
-            "level": "debug"
+            "level": "debug",
+            "output": "/Users/xiewenyu/Desktop/rust-project/leaf/logs.log"
         },
         "dns":{
             "servers":["1.1.1.1"],
-            "dohkeys":{"1.1.1.1":"direct"}
+            "dohkeys":{"1.1.1.1":"auto"}
         },
         "http":{
             "http":"127.0.0.1:7779",
@@ -92,13 +93,13 @@ fn main(){
             "rules": [
                 {
                     "domainKeyword": [
-                        "ipinfo"
+                        "ip111"
                     ],
-                    "target": "direct"
+                    "target": "failover_out"
                 },
                 {
-                    "ip": [
-                        "1.1.1.1"
+                    "domainKeyword": [
+                        "google"
                     ],
                     "target": "direct"
                 }

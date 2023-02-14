@@ -276,6 +276,7 @@ pub fn to_internal(json: &mut Config) -> Result<internal::Config> {
         }
     }
 
+    let mut dns = internal::Dns::new();
     let mut inbounds = Vec::new();
     if let Some(ext_inbounds) = &json.inbounds {
         for ext_inbound in ext_inbounds {
@@ -357,6 +358,7 @@ pub fn to_internal(json: &mut Config) -> Result<internal::Config> {
                     inbounds.push(inbound);
                 }
                 "socks" => {
+                    dns.doh_proxy_addr = format!("{}:{}",inbound.address,inbound.port).to_string();
                     inbounds.push(inbound);
                 }
                 "shadowsocks" => {
@@ -976,7 +978,7 @@ pub fn to_internal(json: &mut Config) -> Result<internal::Config> {
         router = protobuf::MessageField::some(int_router);
     }
 
-    let mut dns = internal::Dns::new();
+    
     let mut servers = Vec::new();
     let mut hosts = HashMap::new();
     if let Some(ext_dns) = &json.dns {

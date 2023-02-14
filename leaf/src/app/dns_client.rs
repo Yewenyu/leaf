@@ -38,6 +38,7 @@ pub struct DnsClient {
     ipv6_cache: Arc<TokioMutex<LruCache<String, CacheEntry>>>,
     last_doh_timeout_time:Arc<TokioMutex<Vec<Instant>>>,
     doh_keys: Arc<HashMap<String,String>>,
+    doh_proxy_addr:String,
 }
 
 impl DnsClient {
@@ -87,6 +88,7 @@ impl DnsClient {
         let servers = Self::load_servers(dns)?;
         let hosts = Self::load_hosts(dns);
         let dohkeys = Self::load_dohkeys(dns);
+        let doh_proxy_addr = dns.doh_proxy_addr.to_owned();
         let ipv4_cache = Arc::new(TokioMutex::new(LruCache::<String, CacheEntry>::new(
             *option::DNS_CACHE_SIZE,
         )));
@@ -103,6 +105,7 @@ impl DnsClient {
             ipv6_cache,
             last_doh_timeout_time:Arc::new(TokioMutex::new(Vec::new())),
             doh_keys:Arc::new(dohkeys),
+            doh_proxy_addr,
         })
     }
 
@@ -193,12 +196,10 @@ impl DnsClient {
         server: &SocketAddr,
     ) -> Result<CacheEntry> {
 
-        if is_direct{
-            let r = self.startdoh(&host.to_string()).await;
+        let r = self.startdoh(&host.to_string(),is_direct).await;
             if r.is_ok(){
                 return Ok(r.unwrap());
             }
-        }
         let socket = if is_direct {
             let socket = self.new_udp_socket(server).await?;
             Box::new(StdOutboundDatagram::new(socket))
@@ -554,7 +555,7 @@ impl DnsClient {
         Err(last_err.unwrap_or_else(|| anyhow!("could not resolve to any address")))
     }
 
-    async fn startdoh(&self,host:&String) -> Result<CacheEntry,()> {
+    async fn startdoh(&self,host:&String,is_direct:bool) -> Result<CacheEntry,()> {
         let start = Instant::now();
         let mut last = self.last_doh_timeout_time.lock().await;
         if last.len() > 0{
@@ -565,7 +566,7 @@ impl DnsClient {
             }
             last.clear();
         }
-        let ips = doh(host.to_string(),self.doh_keys.to_owned()).await;
+        let ips = doh(host.to_string(),is_direct,self.doh_proxy_addr.to_owned(),self.doh_keys.to_owned()).await;
         let interval = Instant::now().checked_duration_since(start).unwrap();
         match ips {
             Ok(v) =>{
@@ -593,10 +594,15 @@ impl DnsClient {
 impl UdpConnector for DnsClient {}
 
 
-async fn cloud_fare_doh(host:String) -> Result<Vec<(String,u64)>, Box<dyn Error>>{
+async fn cloud_fare_doh(host:String,proxy_addr:String) -> Result<Vec<(String,u64)>, Box<dyn Error>>{
         let url = Url::parse(format!("https://1.1.1.1/dns-query?name={}",host).as_str())?;
-        
-        let client = reqwest::Client::builder().timeout(Duration::from_secs(2)).build()?;
+        let mut builder = reqwest::Client::builder();
+
+        if !proxy_addr.is_empty(){
+            let proxy = reqwest::Proxy::http(format!("socks5://{}",proxy_addr))?;
+            builder = builder.proxy(proxy);
+        }
+        let client = builder.timeout(Duration::from_secs(2)).build()?;
 
         let response = client.get(url)
         .header("accept", "application/dns-json")
@@ -626,11 +632,18 @@ async fn cloud_fare_doh(host:String) -> Result<Vec<(String,u64)>, Box<dyn Error>
     return Ok(v)
 }
 
-async fn doh(host:String,keys:Arc<HashMap<String,String>>) -> Result<Vec<(String,u64)>, ()>{
+async fn doh(host:String,is_direct:bool,proxy_addr:String,keys:Arc<HashMap<String,String>>) -> Result<Vec<(String,u64)>, ()>{
     let mut v : Vec<(String,u64)> = Vec::new();
     for (key,value) in keys.iter(){
+        let mut addr = "".to_owned();
+        let mut is_direct = is_direct;
+        if value == "proxy" || (value == "auto" && !is_direct){
+            addr = proxy_addr.to_owned();
+            is_direct = false;
+        }
+        debug!("looking dns {} from doh:{}, type:{},direct:{}",host,key,value,is_direct);
         if key == "1.1.1.1"{
-            match cloud_fare_doh(host.to_owned()).await{
+            match cloud_fare_doh(host.to_owned(),addr).await{
                 Ok( r) =>{
                     v.append(&mut r.to_vec());
                 }
