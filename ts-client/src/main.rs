@@ -22,7 +22,7 @@ fn main(){
         },
         "dns":{
             "servers":["1.1.1.1"],
-            "dohkeys":["1.1.1.1"]
+            "dohkeys":{"1.1.1.1":"direct"}
         },
         "http":{
             "http":"127.0.0.1:7779",

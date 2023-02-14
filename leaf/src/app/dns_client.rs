@@ -37,7 +37,7 @@ pub struct DnsClient {
     ipv4_cache: Arc<TokioMutex<LruCache<String, CacheEntry>>>,
     ipv6_cache: Arc<TokioMutex<LruCache<String, CacheEntry>>>,
     last_doh_timeout_time:Arc<TokioMutex<Vec<Instant>>>,
-    dohKeys: Arc<Vec<String>>,
+    doh_keys: Arc<HashMap<String,String>>,
 }
 
 impl DnsClient {
@@ -70,10 +70,10 @@ impl DnsClient {
         parsed_hosts
     }
 
-    fn load_dohkeys(dns: &crate::config::Dns) -> Vec<String> {
-        let mut keys = Vec::new();
-        for key in &dns.dohKeys {
-            keys.push(key.to_owned());
+    fn load_dohkeys(dns: &crate::config::Dns) -> HashMap<String,String> {
+        let mut keys = HashMap::new();
+        for (k,v) in &dns.doh_keys {
+            keys.insert(k.to_string(), v.to_string());
         }
         keys
     }
@@ -102,7 +102,7 @@ impl DnsClient {
             ipv4_cache,
             ipv6_cache,
             last_doh_timeout_time:Arc::new(TokioMutex::new(Vec::new())),
-            dohKeys:Arc::new(dohkeys),
+            doh_keys:Arc::new(dohkeys),
         })
     }
 
@@ -565,7 +565,7 @@ impl DnsClient {
             }
             last.clear();
         }
-        let ips = doh(host.to_string(),self.dohKeys.to_vec()).await;
+        let ips = doh(host.to_string(),self.doh_keys.to_owned()).await;
         let interval = Instant::now().checked_duration_since(start).unwrap();
         match ips {
             Ok(v) =>{
@@ -626,9 +626,9 @@ async fn cloud_fare_doh(host:String) -> Result<Vec<(String,u64)>, Box<dyn Error>
     return Ok(v)
 }
 
-async fn doh(host:String,keys:Vec<String>) -> Result<Vec<(String,u64)>, ()>{
+async fn doh(host:String,keys:Arc<HashMap<String,String>>) -> Result<Vec<(String,u64)>, ()>{
     let mut v : Vec<(String,u64)> = Vec::new();
-    for key in keys{
+    for (key,value) in keys.iter(){
         if key == "1.1.1.1"{
             match cloud_fare_doh(host.to_owned()).await{
                 Ok( r) =>{

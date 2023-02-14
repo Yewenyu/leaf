@@ -14,7 +14,7 @@ use crate::config::{external_rule, internal};
 pub struct Dns {
     pub servers: Option<Vec<String>>,
     pub hosts: Option<HashMap<String, Vec<String>>>,
-    pub dohkeys:Option<Vec<String>>,
+    pub dohkeys:Option<HashMap<String,String>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -986,11 +986,11 @@ pub fn to_internal(json: &mut Config) -> Result<internal::Config> {
             }
         }
         if let Some(values) = ext_dns.dohkeys.as_ref() {
-            let mut newvs = Vec::new();
-            for v in values {
-                newvs.push(v.to_owned());
+            let mut newvs = HashMap::new();
+            for (k,v) in values.iter() {
+                newvs.insert(k.to_string(), v.to_string());
             }
-            dns.dohKeys = newvs;
+            dns.doh_keys = newvs;
         }
         if let Some(ext_hosts) = ext_dns.hosts.as_ref() {
             for (name, static_ips) in ext_hosts.iter() {
