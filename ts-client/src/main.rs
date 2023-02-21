@@ -66,9 +66,9 @@ fn main(){
             {
                 "protocol": "shadowsocks",
                 "settings": {
-                    "address": "38.147.174.43",
-            "port": 10080,
-            "password": "transocks",
+                    "address": "51.79.157.25",
+            "port": 35039,
+            "password": "0qg09j1tAbzh3sT1",
             "method": "aes-256-gcm"
                 },
                 "tag":"ss"
@@ -92,10 +92,11 @@ fn main(){
             "domainResolve": true ,
             "rules": [
                 {
-                    "domainKeyword": [
-                        "ip111"
+                    "geoip": [
+                        "cn"
                     ],
-                    "target": "failover_out"
+                    "geoPath": "/Users/xiewenyu/Desktop/rust-project/leaf/ts-client/src/geo.mmdb",
+                    "target": "direct"
                 },
                 {
                     "domainKeyword": [

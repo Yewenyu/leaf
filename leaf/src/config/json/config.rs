@@ -230,6 +230,8 @@ pub struct Rule {
     pub port_range: Option<Vec<String>>,
     #[serde(rename = "inboundTag")]
     pub inbound_tag: Option<Vec<String>>,
+    #[serde(rename = "geoPath")]
+    pub geo_path: Option<String>,
     pub target: String,
 }
 
@@ -941,8 +943,14 @@ pub fn to_internal(json: &mut Config) -> Result<internal::Config> {
                 if let Some(ext_geoips) = ext_rule.geoip.as_mut() {
                     for ext_geoip in ext_geoips.drain(0..) {
                         let mut mmdb = internal::router::rule::Mmdb::new();
+                        if let Some(path) = ext_rule.geo_path.as_mut(){
+                            mmdb.file = path.to_string();
+                        }else{
+                            
                         let asset_loc = Path::new(&*crate::option::ASSET_LOCATION);
                         mmdb.file = asset_loc.join("geo.mmdb").to_string_lossy().to_string();
+                        }
+                        
                         mmdb.country_code = ext_geoip;
                         rule.mmdbs.push(mmdb)
                     }
