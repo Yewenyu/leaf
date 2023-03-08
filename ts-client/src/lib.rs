@@ -1,4 +1,4 @@
-use std::{ffi::{CStr, CString}, os::raw::c_char, str::FromStr};
+use std::{ffi::{CStr, CString, c_void}, os::raw::c_char, str::FromStr};
 
 #[no_mangle]
 pub extern "C" fn clash_run_with_config_string(rt_id: u16, config: *const c_char) {
@@ -39,3 +39,20 @@ pub extern "C" fn clash_shutdown(rt_id: u16) -> bool {
 }
 
 
+pub type TcpCallback = unsafe extern "C" fn(*const c_char,i32)->bool;
+
+
+#[no_mangle]
+pub extern "C" fn tcp_ping(addrs:*const c_char,send_byte:bool,timeout: u64,max_count:i32,handle:TcpCallback){
+    if let Ok(addrs) = unsafe { CStr::from_ptr(addrs).to_str() } {
+        let array : Vec<String> = addrs.split(",").map(|x|{x.to_string()}).collect();
+        tcping::start_tcp_ping(&array, send_byte, timeout, max_count, &|x,y|{
+            let c_str = CString::new(x).unwrap();
+            let c_world: *const c_char = c_str.as_ptr() as *const c_char;
+            return unsafe{
+                handle(c_world,y)
+            }
+        })
+    }
+    
+}

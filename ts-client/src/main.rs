@@ -1,6 +1,5 @@
 use std::{env, thread, net::TcpStream, io::{Write, Read}, time::Duration, fs::{self, OpenOptions}, error::Error, collections::HashMap};
 
-
 fn main(){
     // let mut p =  env::current_dir().unwrap().to_str().unwrap();
     let _file = OpenOptions::new()
@@ -10,11 +9,8 @@ fn main(){
 
     //     doh("www.google.com.hk".to_string());
     // udp_example();
-  
-    
     // _ = fs::remove_file("/Users/xiewenyu/Desktop/rust-project/leaf/logs.log");
     // "output": "/Users/xiewenyu/Desktop/rust-project/leaf/logs.log"
-
     let config = r#"
     {
         "log": {
@@ -137,7 +133,7 @@ fn main(){
         panic!("{}",e);
     }
 
-
+    
     print!("end")
 
 }

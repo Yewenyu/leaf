@@ -37,6 +37,7 @@ serde_json = { version = "*", features = ["raw_value"] }
 # serde = { version = "*"}
 # serde_derive ="*"
 reqwest = { version = "0.11", features = ["blocking", "json"] }
+tcp_ping = { git = "https://github.com/Yewenyu/tcping-rx.git" }
 
 
 [build-dependencies]
