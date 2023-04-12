@@ -24,6 +24,13 @@ pub struct Log {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct CatInboundSettings {
+    pub network: Option<String>,
+    pub address: String,
+    pub port: u16,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ShadowsocksInboundSettings {
     pub method: Option<String>,
     pub password: Option<String>,
@@ -66,6 +73,7 @@ pub struct ChainInboundSettings {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TunInboundSettings {
+    pub auto: Option<bool>,
     pub fd: Option<i32>,
     pub name: Option<String>,
     pub address: Option<String>,
@@ -97,6 +105,8 @@ pub struct RedirectOutboundSettings {
 pub struct SocksOutboundSettings {
     pub address: Option<String>,
     pub port: Option<u16>,
+    pub username: Option<String>,
+    pub password: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -105,6 +115,13 @@ pub struct ShadowsocksOutboundSettings {
     pub port: Option<u16>,
     pub method: Option<String>,
     pub password: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ObfsOutboundSettings {
+    pub method: Option<String>,
+    pub host: Option<String>,
+    pub path: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -133,6 +150,7 @@ pub struct TlsOutboundSettings {
     pub server_name: Option<String>,
     pub alpn: Option<Vec<String>>,
     pub certificate: Option<String>,
+    pub insecure: Option<bool>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -228,6 +246,7 @@ pub struct Rule {
     pub external: Option<Vec<String>>,
     #[serde(rename = "portRange")]
     pub port_range: Option<Vec<String>>,
+    pub network: Option<Vec<String>>,
     #[serde(rename = "inboundTag")]
     pub inbound_tag: Option<Vec<String>>,
     #[serde(rename = "geoPath")]
@@ -346,12 +365,26 @@ pub fn to_internal(json: &mut Config) -> Result<internal::Config> {
                         if let Some(ext_netmask) = ext_settings.netmask {
                             settings.netmask = ext_netmask;
                         }
+                        if let Some(ext_auto) = ext_settings.auto {
+                            settings.auto = ext_auto;
+                        }
                         if let Some(ext_mtu) = ext_settings.mtu {
                             settings.mtu = ext_mtu;
                         } else {
                             settings.mtu = 1500;
                         }
                     }
+                    let settings = settings.write_to_bytes().unwrap();
+                    inbound.settings = settings;
+                    inbounds.push(inbound);
+                }
+                "cat" => {
+                    let mut settings = internal::CatInboundSettings::new();
+                    let ext_settings: CatInboundSettings =
+                        serde_json::from_str(ext_inbound.settings.as_ref().unwrap().get()).unwrap();
+                    settings.network = ext_settings.network.unwrap_or("tcp".to_string());
+                    settings.address = ext_settings.address;
+                    settings.port = ext_settings.port as u32;
                     let settings = settings.write_to_bytes().unwrap();
                     inbound.settings = settings;
                     inbounds.push(inbound);
@@ -551,6 +584,12 @@ pub fn to_internal(json: &mut Config) -> Result<internal::Config> {
                     if let Some(ext_port) = ext_settings.port {
                         settings.port = ext_port as u32; // TODO checks
                     }
+                    if let Some(ext_username) = ext_settings.username {
+                        settings.username = ext_username;
+                    }
+                    if let Some(ext_password) = ext_settings.password {
+                        settings.password = ext_password;
+                    }
                     let settings = settings.write_to_bytes().unwrap();
                     outbound.settings = settings;
                     outbounds.push(outbound);
@@ -576,6 +615,27 @@ pub fn to_internal(json: &mut Config) -> Result<internal::Config> {
                     }
                     if let Some(ext_password) = ext_settings.password {
                         settings.password = ext_password;
+                    }
+                    let settings = settings.write_to_bytes().unwrap();
+                    outbound.settings = settings;
+                    outbounds.push(outbound);
+                }
+                "obfs" => {
+                    let mut settings = internal::ObfsOutboundSettings::new();
+                    let ext_settings: ObfsOutboundSettings =
+                        serde_json::from_str(ext_outbound.settings.as_ref().unwrap().get())
+                            .unwrap();
+                    if let Some(ext_method) = ext_settings.method {
+                        // TODO checks
+                        settings.method = ext_method;
+                    } else {
+                        settings.method = "http".to_string();
+                    }
+                    if let Some(ext_host) = ext_settings.host {
+                        settings.host = ext_host;
+                    }
+                    if let Some(ext_path) = ext_settings.path {
+                        settings.path = ext_path;
                     }
                     let settings = settings.write_to_bytes().unwrap();
                     outbound.settings = settings;
@@ -630,6 +690,7 @@ pub fn to_internal(json: &mut Config) -> Result<internal::Config> {
                                 settings.certificate = path;
                             }
                         }
+                        settings.insecure = ext_settings.insecure.unwrap_or_default();
                     }
                     let settings = settings.write_to_bytes().unwrap();
                     outbound.settings = settings;
@@ -969,6 +1030,12 @@ pub fn to_internal(json: &mut Config) -> Result<internal::Config> {
                     for ext_port_range in ext_port_ranges.drain(0..) {
                         // FIXME validate
                         rule.port_ranges.push(ext_port_range);
+                    }
+                }
+                if let Some(ext_networks) = ext_rule.network.as_mut() {
+                    for ext_network in ext_networks.drain(0..) {
+                        // FIXME validate
+                        rule.networks.push(ext_network);
                     }
                 }
                 if let Some(ext_its) = ext_rule.inbound_tag.as_mut() {

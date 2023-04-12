@@ -20,6 +20,7 @@ lib:
 lib-dev:
 	cargo build -p leaf-ffi
 	cbindgen --config leaf-ffi/cbindgen.toml leaf-ffi/src/lib.rs > target/debug/leaf.h
+.PHONY: local local-dev test proto-gen
 
 local:
 	cargo build -p leaf-bin --release
@@ -27,16 +28,8 @@ local:
 local-dev:
 	cargo build -p leaf-bin
 
-mipsel:
-	./misc/build_cross.sh mipsel-unknown-linux-musl
-
-mips:
-	./misc/build_cross.sh mips-unknown-linux-musl
-
 test:
 	cargo test -p leaf -- --nocapture
 
-# Force a re-generation of protobuf files.
 proto-gen:
-	touch leaf/build.rs
-	PROTO_GEN=1 cargo build -p leaf
+	./scripts/regenerate_proto_files.sh

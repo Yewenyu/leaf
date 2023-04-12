@@ -14,8 +14,7 @@ fn main(){
     let config = r#"
     {
         "log": {
-            "level": "debug",
-            "output": "/Users/xiewenyu/Desktop/rust-project/leaf/logs.log"
+            "level": "debug"
         },
         "dns":{
             "servers":["1.1.1.1"],
