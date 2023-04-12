@@ -7,6 +7,7 @@ fn main(){
         .truncate(true) // 清空文件
         .open("/Users/xiewenyu/Desktop/rust-project/leaf/logs.log");
 
+
     //     doh("www.google.com.hk".to_string());
     // udp_example();
     // _ = fs::remove_file("/Users/xiewenyu/Desktop/rust-project/leaf/logs.log");
