@@ -10,6 +10,12 @@ name = "ts"
 path = "src/lib.rs"
 crate-type = ["staticlib"]
 
+[target.x86_64-apple-darwin]
+rustflags = [
+  "-C", "opt-level=3",
+  "-C", "debuginfo=0" # 禁用调试信息
+]
+
 [features]
 default = [
     "default-ring",
