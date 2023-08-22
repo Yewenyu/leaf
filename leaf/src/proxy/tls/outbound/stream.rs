@@ -32,7 +32,7 @@ mod dangerous {
     use std::time::SystemTime;
     use tokio_rustls::rustls::{
         client::{ServerCertVerified, ServerCertVerifier},
-        Certificate, ServerName,
+        Certificate, Error, ServerName,
     };
 
     pub(super) struct NotVerified;
@@ -46,7 +46,7 @@ mod dangerous {
             _scts: &mut dyn Iterator<Item = &[u8]>,
             _ocsp_response: &[u8],
             _now: SystemTime,
-        ) -> core::result::Result<ServerCertVerified, rustls::Error> {
+        ) -> core::result::Result<ServerCertVerified, Error> {
             log::debug!("TLS cert for {:?} not verified", server_name);
             Ok(ServerCertVerified::assertion())
         }

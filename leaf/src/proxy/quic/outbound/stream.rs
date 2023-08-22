@@ -4,9 +4,7 @@ use std::net::SocketAddr;
 use std::path::Path;
 use std::sync::Arc;
 
-use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use futures::FutureExt;
 use futures::TryFutureExt;
 use rustls::OwnedTrustAnchor;
 use tokio::sync::Mutex;
@@ -23,7 +21,8 @@ where
 }
 
 struct Connection {
-    pub conn: quinn::Connection,
+    pub new_conn: quinn::NewConnection,
+    pub total_accepted: usize,
     pub completed: bool,
 }
 
@@ -90,13 +89,12 @@ impl Manager {
 
         let mut client_config = quinn::ClientConfig::new(Arc::new(client_crypto));
         let mut transport_config = quinn::TransportConfig::default();
-        transport_config.max_concurrent_bidi_streams(quinn::VarInt::from_u32(64));
         transport_config.max_idle_timeout(Some(quinn::IdleTimeout::from(quinn::VarInt::from_u32(
             300_000,
-        ))));
+        )))); // ms
         transport_config
             .congestion_controller_factory(Arc::new(quinn::congestion::BbrConfig::default()));
-        client_config.transport_config(Arc::new(transport_config));
+        client_config.transport = Arc::new(transport_config);
 
         Manager {
             address,
@@ -112,22 +110,29 @@ impl Manager {
 impl Manager {
     pub async fn new_stream(
         &self,
-    ) -> Result<QuicProxyStream<quinn::RecvStream, quinn::SendStream>> {
+    ) -> io::Result<QuicProxyStream<quinn::RecvStream, quinn::SendStream>> {
         self.connections.lock().await.retain(|c| !c.completed);
 
         for conn in self.connections.lock().await.iter_mut() {
-            match conn.conn.open_bi().await {
-                Ok((send, recv)) => {
-                    log::trace!(
-                        "opened quic stream on connection with rtt {} ms",
-                        conn.conn.rtt().as_millis(),
-                    );
-                    return Ok(QuicProxyStream { recv, send });
+            if conn.total_accepted < 128 {
+                // FIXME I think awaiting here is fine, it should return immediately, not sure.
+                match conn.new_conn.connection.open_bi().await {
+                    Ok((send, recv)) => {
+                        conn.total_accepted += 1;
+                        log::trace!(
+                            "opened quic stream on connection with rtt {}ms, total_accepted {}",
+                            conn.new_conn.connection.rtt().as_millis(),
+                            conn.total_accepted,
+                        );
+                        return Ok(QuicProxyStream { recv, send });
+                    }
+                    Err(e) => {
+                        conn.completed = true;
+                        log::debug!("open quic bidirectional stream failed: {}", e);
+                    }
                 }
-                Err(e) => {
-                    conn.completed = true;
-                    log::debug!("open quic bidirectional stream failed: {}", e);
-                }
+            } else {
+                conn.completed = true;
             }
         }
 
@@ -135,17 +140,29 @@ impl Manager {
         let socket = self
             .new_udp_socket(&*crate::option::UNSPECIFIED_BIND_ADDR)
             .await?;
-        let mut endpoint = quinn::Endpoint::new(
-            quinn::EndpointConfig::default(),
-            None,
-            socket.into_std()?,
-            quinn::TokioRuntime,
-        )?;
+        let (mut endpoint, _) =
+            quinn::Endpoint::new(quinn::EndpointConfig::default(), None, socket.into_std()?)
+                .map_err(quic_err)?;
         endpoint.set_default_client_config(self.client_config.clone());
 
-        let ips = self.dns_client.read().await.lookup(&self.address).await?;
+        let ips = {
+            self.dns_client
+                .read()
+                .await
+                .direct_lookup(&self.address)
+                .map_err(|e| {
+                    io::Error::new(
+                        io::ErrorKind::Other,
+                        format!("lookup {} failed: {}", &self.address, e),
+                    )
+                })
+                .await?
+        };
         if ips.is_empty() {
-            return Err(anyhow!("could not resolve to any address",));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "could not resolve to any address",
+            ));
         }
         let connect_addr = SocketAddr::new(ips[0], self.port);
 
@@ -155,12 +172,17 @@ impl Manager {
             &self.address
         };
 
-        let conn = endpoint.connect(connect_addr, server_name)?.await?;
+        let new_conn = endpoint
+            .connect(connect_addr, server_name)
+            .map_err(quic_err)?
+            .await
+            .map_err(quic_err)?;
 
-        let (send, recv) = conn.open_bi().await?;
+        let (send, recv) = new_conn.connection.open_bi().await.map_err(quic_err)?;
 
         self.connections.lock().await.push(Connection {
-            conn,
+            new_conn,
+            total_accepted: 1,
             completed: false,
         });
 
@@ -191,12 +213,7 @@ impl Handler {
     pub async fn new_stream(
         &self,
     ) -> io::Result<QuicProxyStream<quinn::RecvStream, quinn::SendStream>> {
-        self.manager.new_stream().await.map_err(|e| {
-            io::Error::new(
-                io::ErrorKind::Other,
-                format!("new QUIC stream failed: {}", e),
-            )
-        })
+        self.manager.new_stream().await
     }
 }
 
